@@ -4,6 +4,8 @@
 # Agent/design-harness scratch state, not site content.
 .impeccable/
 
+# Engineering specs, tickets, and research drafts. Local markdown issue tracker.
+.scratch/
+
 # OS noise
 .DS_Store
-

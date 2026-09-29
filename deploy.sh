@@ -36,18 +36,24 @@ if [ "$DRY" = 1 ]; then exit 0; fi
 say "→ pushing to $REPO ($BRANCH)"
 git push -q origin "$BRANCH" || die "push failed — run: gh auth login"
 
-# Poll the Pages build so we report a finished deploy, not just a pushed commit.
+# Poll the Actions run so we report a finished deploy, not just a pushed commit.
+# This site uses build_type=workflow, so the Pages build API (/pages/builds/latest)
+# returns 404 — poll the workflow run instead.
 say "→ waiting for GitHub Pages build"
-for i in $(seq 1 40); do
-  sleep 5
-  state=$(gh api "repos/$REPO/pages/builds/latest" --jq '.status' 2>/dev/null || echo unknown)
-  case "$state" in
-    built)   say "→ build succeeded"; break ;;
-    errored) die "Pages build FAILED — see: gh run list -R $REPO" ;;
-  esac
-  [ $((i % 4)) = 0 ] && echo "  …$((i * 5))s ($state)"
-done
+run_id=$(gh run list -R "$REPO" -L 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+if [ -z "$run_id" ]; then
+  say "→ could not read the workflow run; skipping the wait"
+else
+  for i in $(seq 1 40); do
+    sleep 5
+    state=$(gh run view "$run_id" -R "$REPO" --json status,conclusion --jq '.status+" "+.conclusion' 2>/dev/null || echo unknown)
+    case "$state" in
+      *success*) say "→ build succeeded"; break ;;
+      *failure*|*cancelled*) die "Pages build FAILED — see: gh run view $run_id -R $REPO" ;;
+    esac
+    [ $((i % 4)) = 0 ] && echo "  …$((i * 5))s ($state)"
+  done
+fi
 
 say "→ live: $URL"
 echo "  (Pages can take another ~30s to serve the new build; hard-refresh if stale)"
-

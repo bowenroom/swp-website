@@ -1,0 +1,18 @@
+{
+  "id": 22024,
+  "status": "pending",
+  "preset": "tail_frame",
+  "prompt": "Single continuous cinematic camera move, one take, no cuts, no transitions. The camera continues forward along the highway and rises from road level to about tree height, drifting to one side and angling down at the road, the guardrail and the grass verge sweeping past close to the lens in the foreground. Throughout, keep the camera gliding toward a new stretch of highway where three unmanned quadcopter drones hover in a loose formation, each projecting a soft translucent pale blue sensing cone down onto the asphalt, the cones overlapping and brightening where they cross, while a small four wheeled ground robot with a sensor mast sits on the shoulder and two cars pass through the overlapping light. In the final second, the movement settles and calms into holding that mid height, still gliding forward above the road. Soft matte clay 3D miniature tilt-shift diorama world, handcrafted toy-model aesthetic, rounded organic polymer-clay shapes, matte velvety surfaces, soft warm studio light, long soft shadows, miniature depth of field with softly blurred far edges. Restrained low-saturation palette: warm ivory cream background, muted indigo, dusty lavender, soft sage green, pale terracotta, warm ochre gold accents, warm charcoal. The same continuous floating island world throughout: a curving two-lane highway with pale lane markings and a low guardrail, soft green hills, rounded toy trees, grey rock outcrops, a blue river with a short waterfall and a little arched bridge, small rounded stylized cars in muted colours, and unmanned rounded toy quadcopter drones with no cockpit, no pilot, no human figure aboard. Smooth, graceful, slow motion, gentle natural parallax, steady smooth motion, no camera shake. No text, no captions, no letters, no numbers, no logos, no watermarks, no user interface overlays. 16:9 landscape.",
+  "width": 1344,
+  "height": 768,
+  "seconds": 8.0,
+  "sampler_steps": 20,
+  "interpolate": true,
+  "progress": "",
+  "error": "",
+  "has_video": false,
+  "has_poster": false,
+  "created_at": "2026-09-29 01:07:08",
+  "started_at": "",
+  "finished_at": ""
+}

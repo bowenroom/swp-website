@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Weipeng Shi — 道路场景智能与多智能体协同</title>
+  <meta name="description" content="道路安全应急中的无人机巡检、无人驾驶与多模态大模型协同决策。" />
+  <style>
+    /* Palette is locked to the clay-diorama footage: the scene background IS the
+       page background, so the video never reads as a pasted-in rectangle. */
+    :root, .sw-root {
+      --sw-bg: #F5EDE0;
+      --sw-ink: #241d2b;
+      --sw-ink-soft: #6a6072;
+      --sw-accent: #9B7EBD;
+    }
+  </style>
+</head>
+<body>
+  <div id="top"></div>
+  <div id="world"></div>
+
+  <script src="assets/scrub-engine.js"></script>
+  <script>
+    mountScrollWorld(document.getElementById('world'), {
+      brand: { name: 'Weipeng Shi', href: '#top' },
+      hint: '滚动以进入世界 · scroll to fly in',
+      // Phones stay still: no clip is ever fetched, the stillMobile portraits
+      // cross-dissolve as you scroll. Desktop plays the four 1344x768 clay shots.
+      stillOnlyMobile: true,
+      // No connectors: adjacent shots are already frame-locked (verified SSIM 0.98
+      // on shot1's tail vs keyframe 1), so the engine cross-dissolves them directly.
+      sections: [
+        {
+          id: 'act1', label: '道路全景',
+          still: 'assets/k0-establish.jpg',
+          stillMobile: 'assets/k0-establish-mobile.jpg',
+          clip: 'assets/vid/s1-approach.mp4',
+          clipMobile: 'assets/vid/s1-approach.mp4',
+          accent: '#8FB98A',
+          scroll: 1.5,
+          eyebrow: '应用 · Application',
+          title: '道路安全应急',
+          body: '无人机巡检与道路应急处置。真实要解决的是路面事件：抛洒物、占道、交通事故、恶劣天气下的通行风险。',
+          tags: ['道路巡检', '应急响应', '通行安全'],
+        },
+        {
+          id: 'act2', label: '感知编队',
+          still: 'assets/k2-sensing.jpg',
+          stillMobile: 'assets/k2-sensing-mobile.jpg',
+          clip: 'assets/vid/s2-sensing.mp4',
+          clipMobile: 'assets/vid/s2-sensing.mp4',
+          accent: '#7E9BC4',
+          scroll: 1.4,
+          eyebrow: '载体 · Platform',
+          title: '无人机与无人驾驶协同感知',
+          body: '空中无人机编队与地面无人车共享同一份现场。多视角覆盖让单点遮挡不再等于信息缺失。',
+          tags: ['无人机编队', '无人车', '多视角融合'],
+        },
+        {
+          id: 'act3', label: '融合理解',
+          still: 'assets/k3-fusion.jpg',
+          stillMobile: 'assets/k3-fusion-mobile.jpg',
+          clip: 'assets/vid/s3-fusion.mp4',
+          clipMobile: 'assets/vid/s3-fusion.mp4',
+          accent: '#C88A5A',
+          scroll: 1.4,
+          eyebrow: '理解 · Understanding',
+          title: '多模态视觉语言大模型',
+          body: '路面纹理、地形、车辆、天气——异构证据被汇聚成一次共同理解，而不是一堆互不相认的传感读数。',
+          tags: ['视觉语言模型', '多模态', '场景理解'],
+        },
+        {
+          id: 'act4', label: '协同决策',
+          still: 'assets/k4-decision.jpg',
+          stillMobile: 'assets/k4-decision-mobile.jpg',
+          clip: 'assets/vid/s4-decision.mp4',
+          clipMobile: 'assets/vid/s4-decision.mp4',
+          accent: '#9B7EBD',
+          scroll: 1.6,
+          linger: 0.35,
+          eyebrow: '决策 · Decision',
+          title: '多智能体协同与决策',
+          body: '感知、研判、处置各由一个智能体承担。它们互相通告、互相约束，最终让道路恢复畅通。',
+          tags: ['多智能体', '协同决策', '辅助驾驶'],
+          cta: {
+            primary: { label: '看论文 Papers', href: '../papers/index.html' },
+            secondary: { label: '读博客 Blog', href: '../blogs/index.html' },
+          },
+        },
+      ],
+    });
+  </script>
+</body>
+</html>

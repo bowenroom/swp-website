@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Papers · 施伟鹏</title>
+<style>
+  :root {
+    --parchment:  #f5f4ed;
+    --ivory:      #faf9f5;
+    --inline-bg:  #f0eee6;
+    --border:     #e8e6dc;
+    --border-soft:#e5e3d8;
+    --brand:      #1B365D;
+    --brand-tint: #EEF2F7;
+    --tag-bg:     #E4ECF5;
+    --near-black: #141413;
+    --dark-warm:  #3d3d3a;
+    --charcoal:   #4d4c48;
+    --stone:      #6b6a64;
+    --measure:    720px;
+    --serif: "TsangerJinKai02", "Source Han Serif SC", "Source Han Serif CN",
+             "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+    --latin: "Charter", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+  img, figure { max-width: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--parchment);
+    color: var(--near-black);
+    font-family: var(--serif);
+    font-size: 10.5pt;
+    line-height: 1.5;
+    letter-spacing: 0.2pt;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+
+  .wrap { max-width: var(--measure); margin: 0 auto; }
+
+  /* ── masthead ───────────────────────────────── */
+  header.masthead {
+    padding: 72px 0 34px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .crumb {
+    font-family: var(--latin);
+    font-size: 8.5pt;
+    letter-spacing: 0.9pt;
+    text-transform: uppercase;
+    color: var(--stone);
+    margin-bottom: 20px;
+  }
+  .crumb a { color: var(--stone); text-decoration: none; }
+  .crumb a:hover { color: var(--brand); }
+  h1 {
+    font-size: 27pt;
+    line-height: 1.15;
+    font-weight: 600;
+    margin: 0 0 14px;
+    letter-spacing: 0;
+  }
+  .lede {
+    font-size: 11pt;
+    color: var(--charcoal);
+    max-width: 56ch;
+    margin: 0 0 22px;
+  }
+  .stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 30px;
+    font-family: var(--latin);
+    font-size: 8.5pt;
+    color: var(--stone);
+    letter-spacing: 0.4pt;
+  }
+  .stat-row b { font-size: 13pt; color: var(--brand); font-weight: 600; margin-right: 5px; }
+
+  /* ── filter ──────────────────────────────────── */
+  nav.filter {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  nav.filter button {
+    font: inherit;
+    font-family: var(--latin);
+    font-size: 9pt;
+    letter-spacing: 0.3pt;
+    color: var(--stone);
+    background: none;
+    border: 0;
+    border-bottom: 1.5px solid transparent;
+    padding: 0 0 3px;
+    cursor: pointer;
+  }
+  nav.filter button:hover { color: var(--brand); }
+  nav.filter button[aria-pressed="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+
+  /* ── year ────────────────────────────────────── */
+  section.year { padding: 30px 0 6px; }
+  h2.year-label {
+    font-family: var(--latin);
+    font-size: 10pt;
+    font-weight: 600;
+    letter-spacing: 1.6pt;
+    color: var(--brand);
+    margin: 0 0 4px;
+  }
+  .year-rule { border: 0; border-top: 1px solid var(--border); margin: 0 0 22px; }
+
+  /* ── entry ───────────────────────────────────── */
+  article.entry {
+    display: grid;
+    grid-template-columns: 1fr 232px;
+    gap: 30px;
+    padding: 26px 0 28px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  article.entry > * { min-width: 0; }
+  article.entry:last-child { border-bottom: 0; }
+
+  .title {
+    font-size: 12.5pt;
+    line-height: 1.38;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .authors {
+    font-family: var(--latin);
+    font-size: 9.5pt;
+    color: var(--charcoal);
+    line-height: 1.55;
+    margin: 0 0 8px;
+  }
+  .authors .me { color: var(--brand); font-weight: 700; }
+  .venue {
+    font-family: var(--latin);
+    font-size: 9.5pt;
+    font-style: italic;
+    color: var(--stone);
+    margin: 0 0 12px;
+  }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .badge {
+    font-family: var(--latin);
+    font-size: 8pt;
+    letter-spacing: 0.4pt;
+    color: var(--brand);
+    background: var(--tag-bg);
+    border: 1px solid #d5e0ee;
+    border-radius: 2px;
+    padding: 2.5px 7px;
+    white-space: nowrap;
+  }
+  .badge.q1 { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .badge.role { background: transparent; color: var(--stone); border-color: var(--border); }
+  .links a {
+    font-family: var(--latin);
+    font-size: 9pt;
+    color: var(--brand);
+    text-decoration: none;
+    border-bottom: 1px solid #b9c8dd;
+    margin-right: 16px;
+  }
+  .links a:hover { border-bottom-color: var(--brand); }
+  figure.fig { margin: 0; }
+  .fig img {
+    width: 100%; height: auto; display: block;
+    border: 1px solid var(--border); border-radius: 2px;
+    background: var(--ivory); padding: 6px;
+  }
+  .fig figcaption {
+    font-family: var(--latin); font-size: 7.5pt; color: var(--stone);
+    margin-top: 6px; letter-spacing: 0.3pt; line-height: 1.45;
+  }
+
+  .affil {
+    margin: 40px 0 0;
+    padding: 20px 22px;
+    background: var(--brand-tint);
+    border-left: 2px solid var(--brand);
+  }
+  .affil h3 { font-size: 10.5pt; margin: 0 0 8px; color: var(--brand); }
+  .affil p { font-family: var(--latin); font-size: 9pt; color: var(--charcoal); margin: 0 0 4px; line-height: 1.55; }
+
+  footer.site {
+    margin-top: 64px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--latin);
+    font-size: 8.5pt;
+    color: var(--stone);
+    letter-spacing: 0.4pt;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 0 16px 64px; overflow-wrap: break-word; }
+    article.entry { grid-template-columns: 1fr; }
+    figure.fig { order: -1; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="crumb"><a href="/">首页</a> &nbsp;/&nbsp; Papers</div>
+    <h1>论文</h1>
+    <p class="lede">
+      雾天条件下的鲁棒地表覆盖分类与语义分割为主要工作方向，覆盖 IEEE TGRS、IEEE Sensors Journal、
+      Remote Sensing 等期刊；近年工作延伸至电池状态估计与三维重建。
+    </p>
+    <div class="stat-row">
+      <span><b>10</b>篇</span>
+      <span><b>6</b>篇第一作者</span>
+      <span><b>5</b>篇 JCR Q1</span>
+      <span><b>1</b>篇中科院一区 TOP</span>
+      <span><b>8.9</b>最高 IF</span>
+    </div>
+  </header>
+
+  <nav class="filter">
+    <button aria-pressed="true" data-f="all">全部</button>
+    <button aria-pressed="false" data-f="first">第一作者</button>
+    <button aria-pressed="false" data-f="collab">合作者</button>
+  </nav>
+
+  <section class="year">
+    <h2 class="year-label">2024</h2>
+    <hr class="year-rule" />
+    <article class="entry" data-role="first">
+      <div>
+        <h3 class="title">Learning Rich Multimodal Representation for Robust Land Cover Classification in Fog</h3>
+        <p class="authors"><span class="me">Weipeng Shi</span>, Wenhu Qin, Zhonghua Yun</p>
+        <p class="venue">IEEE Sensors Journal, 24(7), 10794–10808</p>
+        <div class="badges">
+          <span class="badge role">第一作者 / 第一通讯</span>
+          <span class="badge">IF 4.3</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1109/JSEN.2024.3364150">DOI</a><a href="https://ieeexplore.ieee.org/document/10438384">IEEE Xplore</a></p>
+      </div>
+      <figure class="fig"><img src="figures/isj-2024-snr-framework.png" alt="整体框架与 SNR 引导的特征提取" /><figcaption>整体框架与 SNR 引导的特征提取模块</figcaption></figure>
+    </article>
+  </section>
+
+  <section class="year">
+    <h2 class="year-label">2023</h2>
+    <hr class="year-rule" />
+    <article class="entry" data-role="first">
+      <div>
+        <h3 class="title">Semantic Representation Fusion-Based Network for Robust Land Cover Classification in Foggy Conditions</h3>
+        <p class="authors"><span class="me">Weipeng Shi</span>, Wenhu Qin, Zhonghua Yun, Chao Wu, Yukun Yang, Tao Zhao</p>
+        <p class="venue">IEEE Transactions on Geoscience and Remote Sensing, 61, 1–16</p>
+        <div class="badges">
+          <span class="badge role">第一作者</span>
+          <span class="badge">IF 8.8</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge q1">中科院一区 TOP</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1109/TGRS.2023.3280158">DOI</a><a href="https://ieeexplore.ieee.org/document/10136767">IEEE Xplore</a></p>
+      </div>
+      <figure class="fig"><img src="figures/tgrs-2023-fusion-network.png" alt="语义表示融合网络结构" /><figcaption>语义表示融合网络：DDS-ASPP、EACM 与 SRA</figcaption></figure>
+    </article>
+    <article class="entry" data-role="collab">
+      <div>
+        <h3 class="title">Research on Active State of Charge Balance of Battery Pack Based on Two Controllable Flyback Converters</h3>
+        <p class="authors">Zhonghua Yun, Wenhu Qin, <span class="me">Weipeng Shi</span>, Chao Wu</p>
+        <p class="venue">Journal of Energy Storage, 57, 106183</p>
+        <div class="badges">
+          <span class="badge role">合作者</span>
+          <span class="badge">IF 8.9</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区 TOP</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1016/j.est.2022.106183">DOI</a><a href="https://www.sciencedirect.com/science/article/pii/S2352152X22021727">ScienceDirect</a></p>
+      </div>
+      <figure class="fig"><img src="figures/jes-2023-balance-circuit.png" alt="均衡电路实验接线图" /><figcaption>双可控反激变换器均衡实验接线图</figcaption></figure>
+    </article>
+  </section>
+
+  <section class="year">
+    <h2 class="year-label">2022</h2>
+    <hr class="year-rule" />
+    <article class="entry" data-role="first">
+      <div>
+        <h3 class="title">Towards Robust Semantic Segmentation of Land Covers in Foggy Conditions</h3>
+        <p class="authors"><span class="me">Weipeng Shi</span>, Wenhu Qin, Allshine Chen</p>
+        <p class="venue">Remote Sensing, 14(18), 4551</p>
+        <div class="badges">
+          <span class="badge role">第一作者</span>
+          <span class="badge">IF 5.6</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区 TOP</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.3390/rs14184551">DOI</a><a href="https://www.mdpi.com/2072-4292/14/18/4551">MDPI</a></p>
+      </div>
+      <figure class="fig"><img src="figures/rs-2022-mrfm-framework.png" alt="MRFM 多尺度融合框架" /><figcaption>MRFM 多尺度鲁棒融合框架（RGB + DSM）</figcaption></figure>
+    </article>
+    <article class="entry" data-role="first">
+      <div>
+        <h3 class="title">Land Cover Classification in Foggy Conditions: Toward Robust Models</h3>
+        <p class="authors"><span class="me">Weipeng Shi</span>, Wenhu Qin, Zhonghua Yun, Allshine Chen, Kai Huang, Tao Zhao</p>
+        <p class="venue">IEEE Geoscience and Remote Sensing Letters, 19, 1–5</p>
+        <div class="badges">
+          <span class="badge role">第一作者</span>
+          <span class="badge">IF 5.5</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1109/LGRS.2022.3187779">DOI</a><a href="https://ieeexplore.ieee.org/document/9812620">IEEE Xplore</a></p>
+      </div>
+      <figure class="fig"><img src="figures/grsl-2022-fog-challenges.png" alt="雾天影像中的同质性、异质性、遮挡与尺度多样性" /><figcaption>雾天影像的四类固有挑战：异质性、遮挡与尺度多样性</figcaption></figure>
+    </article>
+    <article class="entry" data-role="collab">
+      <div>
+        <h3 class="title">State of Charge Estimation of Lithium-Ion Batteries with Non-Negligible Outlier Observations Based on Student's-T Filter</h3>
+        <p class="authors">Zhonghua Yun, Wenhu Qin, <span class="me">Weipeng Shi</span></p>
+        <p class="venue">Journal of Energy Storage, 55, 105825</p>
+        <div class="badges">
+          <span class="badge role">合作者</span>
+          <span class="badge">IF 8.9</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区 TOP</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1016/j.est.2022.105825">DOI</a><a href="https://www.sciencedirect.com/science/article/pii/S2352152X22018138">ScienceDirect</a></p>
+      </div>
+      <figure class="fig"><img src="figures/jes-2022-tfilter-pipeline.png" alt="含离群观测的荷电状态估计流程" /><figcaption>整体流程：二阶电池模型参数辨识、四类估计算法对比与结果</figcaption></figure>
+    </article>
+    <article class="entry" data-role="collab">
+      <div>
+        <h3 class="title">State of Charge Estimation of Lithium-Ion Battery under Time-Varying Noise Based on Variational Bayesian Estimation Methods</h3>
+        <p class="authors">Zhonghua Yun, Wenhu Qin, <span class="me">Weipeng Shi</span></p>
+        <p class="venue">Journal of Energy Storage, 52, 104916</p>
+        <div class="badges">
+          <span class="badge role">合作者</span>
+          <span class="badge">IF 8.9</span>
+          <span class="badge q1">JCR Q1</span>
+          <span class="badge">中科院二区 TOP</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.1016/j.est.2022.104916">DOI</a><a href="https://www.sciencedirect.com/science/article/pii/S2352152X22009239">ScienceDirect</a></p>
+      </div>
+      <figure class="fig"><img src="figures/jes-2022b-vbe-error-curves.png" alt="时变噪声下荷电状态估计误差曲线" /><figcaption>三种噪声条件下 EKF / ESTF / KLDESTF 的绝对误差对比</figcaption></figure>
+    </article>
+  </section>
+
+  <section class="year">
+    <h2 class="year-label">2021</h2>
+    <hr class="year-rule" />
+    <article class="entry" data-role="first">
+      <div>
+        <h3 class="title">Attention-Based Context Aware Network for Semantic Comprehension of Aerial Scenery</h3>
+        <p class="authors"><span class="me">Weipeng Shi</span>, Wenhu Qin, Zhonghua Yun, Peng Ping, Kaiyang Wu, Yuke Qu</p>
+        <p class="venue">Sensors, 21(6), 1983</p>
+        <div class="badges">
+          <span class="badge role">第一作者</span>
+          <span class="badge">IF 4.2</span>
+          <span class="badge">JCR Q2</span>
+          <span class="badge">中科院三区</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.3390/s21061983">DOI</a><a href="https://www.mdpi.com/1424-8220/21/6/1983">MDPI</a></p>
+      </div>
+      <figure class="fig"><img src="figures/sensors-2021-cram-segmentation.png" alt="CRAM 分割结果对比" /><figcaption>CRAM 与 FCN 基线的语义分割对比</figcaption></figure>
+    </article>
+    <article class="entry" data-role="collab">
+      <div>
+        <h3 class="title">State-of-Health Prediction for Lithium-Ion Batteries Based on a Novel Hybrid Approach</h3>
+        <p class="authors">Zhonghua Yun, Wenhu Qin, <span class="me">Weipeng Shi</span>, Peng Ping</p>
+        <p class="venue">Energies, 13(18), 4858</p>
+        <div class="badges">
+          <span class="badge role">合作者</span>
+          <span class="badge">IF 3.4</span>
+          <span class="badge">JCR Q2</span>
+          <span class="badge">中科院三区</span>
+        </div>
+        <p class="links"><a href="https://doi.org/10.3390/en13184858">DOI</a><a href="https://www.mdpi.com/1996-1073/13/18/4858">MDPI</a></p>
+      </div>
+      <figure class="fig"><img src="figures/energies-2021-soh-flow.png" alt="电池健康状态预测方法流程" /><figcaption>CEEMDAN 分解 + ARIMA / LSSVM 的混合预测流程</figcaption></figure>
+    </article>
+    <article class="entry" data-role="collab">
+      <div>
+        <h3 class="title">Advances in Computer Graphics: 39th Computer Graphics International Conference (CGI 2022), LNCS 13443</h3>
+        <p class="authors">Yukun Yang, <span class="me">Weipeng Shi</span>, Jian Zhang, Jinman Kim, George Papagiannakis, Bin Sheng, Daniel Thalmann, Marina Gavrilova, et al.</p>
+        <p class="venue">Springer Nature Switzerland, 2022</p>
+        <div class="badges"><span class="badge role">合作者</span><span class="badge">会议论文</span></div>
+        <p class="links"><a href="https://doi.org/10.1007/978-3-031-23473-6">DOI</a><a href="https://link.springer.com/chapter/10.1007/978-3-031-23473-6_3">Springer</a></p>
+      </div>
+      <figure class="fig"><img src="figures/cgi-2021-piglet-reid-ablation.png" alt="猪只重识别消融实验对比" /><figcaption>基线与 CBAM / Triplet / 组合方案的定性对比</figcaption></figure>
+    </article>
+  </section>
+
+  <div class="affil">
+    <h3>合作单位与团队</h3>
+    <p>主要合作者：Wenhu Qin、Zhonghua Yun、Chao Wu、Tao Zhao、Yukun Yang、Allshine Chen、Kai Huang、Peng Ping</p>
+    <p>合作单位：南京邮电大学 · 计算机学院；与境外高校与企业保持研究合作。</p>
+  </div>
+
+  <footer class="site">
+    <span>Weipeng Shi · swp.lionpilot.tech</span>
+    <span>中文 / <a href="/en/papers/" style="color:inherit">EN</a></span>
+  </footer>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('nav.filter button');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    const f = b.dataset.f;
+    document.querySelectorAll('article.entry').forEach(e => {
+      e.style.display = (f === 'all' || e.dataset.role === f) ? '' : 'none';
+    });
+  }));
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Python venv used for the image/video tooling — never belongs in the site repo.
+.venv/
+
+# Agent/design-harness scratch state, not site content.
+.impeccable/
+
+# OS noise
+.DS_Store
+

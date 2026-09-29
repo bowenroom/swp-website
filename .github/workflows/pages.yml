@@ -1,0 +1,39 @@
+name: Deploy site to GitHub Pages
+
+# GitHub Pages' REST API only accepts / or /docs as a publishing source, but an
+# Actions workflow can publish any directory. That keeps the site rooted at
+# prototype/ (so / is the hero and /papers/ + /blogs/ are subpaths) and keeps the
+# 62 MB of archived v1 footage in archive/ out of the deployed bundle for free.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race: a newer push supersedes an in-flight build.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: prototype
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+

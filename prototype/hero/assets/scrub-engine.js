@@ -193,7 +193,31 @@ function mountScrollWorld(container, config) {
     SEGMENTS.forEach(s => { s.start = off * vh; off += s.w; s.end = off * vh; });
     totalW = off;
     track.style.height = (totalW * vh + vh) + 'px';   // +1vh so the last flight completes
+    clampCopyParallax();
     read();
+  }
+
+  // How far each copy block may drift before it would leave the viewport. A block
+  // centred vertically can move (vh - h)/2 in each direction before an edge is
+  // clipped; one bottom-anchored (phones) can only rise. Driving --sw-par through
+  // this bound is what keeps the CTA buttons on screen on short laptop windows —
+  // the 4vh nominal drift is far more than a 600px-tall viewport can afford when
+  // the block is 380px tall.
+  const PAR_MAX_VH = 2;   // ±2vh of nominal drift, then clamped to real slack
+  function clampCopyParallax() {
+    copies.forEach((c) => {
+      const h = c.offsetHeight || 0;
+      let slack;
+      if (isMobile()) {
+        // bottom-anchored: drifting downward is what pushes it off, so only the
+        // upward direction has room. Keep a small floor for the safe-area inset.
+        slack = Math.max(0, vh - h - 8) ;
+        c.dataset.swSlack = String(Math.min(slack, PAR_MAX_VH * vh));
+      } else {
+        slack = Math.max(0, (vh - h) / 2);
+        c.dataset.swSlack = String(Math.min(slack, PAR_MAX_VH * vh));
+      }
+    });
   }
 
   function jumpTo(i) {
@@ -266,7 +290,17 @@ function mountScrollWorld(container, config) {
       else cop = (before || after) ? 0 : smooth(1 - Math.abs(pr - 0.5) / 0.5);
       const c = copies[i];
       c.style.opacity = cop;
-      c.style.transform = reduce ? 'none' : `translateY(${(0.5 - pr) * 4}vh)`;
+      // Parallax drift, written as a custom property so the stylesheet can keep
+      // composing it with the centring / bottom anchors. Never `transform` here:
+      // assigning transform outright would wipe the -50% centring and let a tall
+      // block (last act has title + body + tags + CTA) hang off the bottom of a
+      // short viewport. Clamped to the slack the block really has, so on a short
+      // screen the copy still breathes instead of sliding out of view.
+      // Nominal ±2vh drift, then clamped to the slack measured in layout().
+      let par = reduce ? 0 : (0.5 - pr) * PAR_MAX_VH * 2;   // in vh, range ±PAR_MAX_VH
+      const slackVh = (parseFloat(c.dataset.swSlack) || 0) / vh;   // slack -> vh
+      par = clamp(par, -slackVh, slackVh);
+      c.style.setProperty('--sw-par', par.toFixed(3) + 'vh');
       c.style.pointerEvents = cop > 0.5 ? 'auto' : 'none';
     }
 
@@ -336,6 +370,9 @@ function mountScrollWorld(container, config) {
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', layout);
   window.addEventListener('load', layout);
+  // Web fonts can land after first paint and change every block's height, which
+  // changes the slack the parallax is clamped to. Re-measure once they settle.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(clampCopyParallax);
   layout();
   requestAnimationFrame(raf);
 
@@ -401,7 +438,10 @@ function injectCSS() {
   .sw-scene__still{will-change:transform;} .sw-scene.has-clip .sw-scene__still{opacity:0;} .sw-scene__video{z-index:1;}
   .sw-copylayer{position:fixed;inset:0;z-index:20;pointer-events:none;}
   .sw-copylayer::before{content:"";position:absolute;inset:0;width:min(58vw,780px);background:linear-gradient(90deg,var(--sw-bg) 0%,color-mix(in srgb,var(--sw-bg) 82%,transparent) 34%,color-mix(in srgb,var(--sw-bg) 40%,transparent) 62%,transparent 100%);}
-  .sw-copy{position:absolute;left:clamp(18px,5vw,64px);top:50%;transform:translateY(-50%);width:min(42vw,460px);opacity:0;will-change:opacity,transform;}
+  /* --sw-par is written by the scroll loop. It is COMPOSED with the centring
+     offset here (added, not substituted) so the drift can never un-centre the
+     block; read() clamps it to the slack the block actually has. */
+  .sw-copy{position:absolute;left:clamp(18px,5vw,64px);top:50%;transform:translateY(calc(-50% + var(--sw-par,0px)));width:min(42vw,460px);opacity:0;will-change:opacity,transform;}
   .sw-copy__num{font-family:ui-monospace,Menlo,monospace;font-size:.74rem;letter-spacing:.12em;color:var(--sw-ink-soft);}
   .sw-copy__eyebrow{display:block;margin-top:18px;font-family:var(--sw-font-display);font-weight:700;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--sw-accent);}
   .sw-copy__title{font-family:var(--sw-font-display);font-weight:700;color:var(--sw-ink);font-size:clamp(2rem,4.4vw,3.5rem);line-height:1.03;margin:12px 0 0;letter-spacing:-.01em;text-shadow:0 2px 20px color-mix(in srgb,var(--sw-bg) 70%,transparent);}
@@ -430,7 +470,7 @@ function injectCSS() {
     .sw-copylayer::before{width:100%;height:60%;top:auto;bottom:0;background:linear-gradient(0deg,var(--sw-bg) 8%,color-mix(in srgb,var(--sw-bg) 70%,transparent) 46%,transparent 100%);}
     /* Anchor copy to the bottom, clear of the home indicator / collapsing URL bar.
        dvh + env() are progressive: browsers that lack them keep the vh fallback line. */
-    .sw-copy{left:clamp(18px,5vw,64px);right:clamp(18px,5vw,64px);top:auto;bottom:clamp(64px,14vh,120px);transform:none;width:auto;max-width:560px;}
+    .sw-copy{left:clamp(18px,5vw,64px);right:clamp(18px,5vw,64px);top:auto;bottom:clamp(64px,14vh,120px);transform:translateY(var(--sw-par,0px));width:auto;max-width:560px;}
     .sw-copy{bottom:calc(clamp(56px,12dvh,110px) + env(safe-area-inset-bottom));}
     .sw-copy__title{font-size:clamp(1.9rem,7.5vw,2.7rem);}
     .sw-copy__body{max-width:none;font-size:clamp(.98rem,3.6vw,1.1rem);} .sw-scene__video,.sw-scene__still{object-position:center 46%;}

@@ -62,8 +62,9 @@
      - clips encoded native-res, crf~20, -g 8, +faststart, no audio (see pipeline.md)
      - connectors' endpoints are the neighbouring dives' ACTUAL frames (see SKILL Step 5)
      - (optional) mobile variants at ~720p, -g 4 for smoother phone scrubbing
-   The engine loads each clip as a Blob (always seekable) and scrubs currentTime; it does
-   NOT depend on HTTP byte-range support.
+  The engine points a <video> straight at the clip and scrubs currentTime, so it streams
+  progressively over ordinary HTTP range requests rather than holding a whole file in
+  memory first.
    ========================================================================== */
 
 function mountScrollWorld(container, config) {
@@ -150,6 +151,7 @@ function mountScrollWorld(container, config) {
     scene.appendChild(img); stage.appendChild(scene);
     s.el = scene; s.img = img; s.video = null; s.hasClip = false;
     s.loading = false; s.ready = false; s.cur = 0; s.target = 0; s.visible = false;
+    s.failed = false;
   });
 
   // per-section copy / route / nav
@@ -225,46 +227,222 @@ function mountScrollWorld(container, config) {
     window.scrollTo({ top: seg.start + (seg.end - seg.start) * 0.5, behavior: reduce ? 'auto' : 'smooth' });
   }
 
-  function loadClip(s) {
-    // Under prefers-reduced-motion we never load the clips at all — the stills stay up
+  // Two thresholds, because arming a clip and playing it are different jobs.
+  //
+  // ARM only asks for the container. Every clip here is faststart, so the moov
+  // atom sits in the first ~11 KB: 'metadata' costs almost nothing but tells us
+  // duration and dimensions early enough to scrub against.
+  //
+  // NEAR is where a clip is close enough to actually be on screen, and only then
+  // does the browser pull the body. Before this ladder every clip was created
+  // with preload='auto' as soon as it came within 1.6vh, so on a slow link the
+  // whole 12 MB began downloading at once and the scene the visitor was actually
+  // looking at lost the bandwidth race to scenes they had not scrolled to yet.
+  //
+  // 0.8 rather than 1.6: at 1.6 a further scene was already at preload='auto' while
+  // its predecessor was still on screen, so three files competed for the same link.
+  const ARM_VH = 3.0;
+  const NEAR_VH = 0.8;
+
+  // Serve the lighter mobile encode on phones when one was provided.
+  const clipUrl = (s) => (isMobile() && s.clipM) ? s.clipM : s.clip;
+
+  // One <video> per UNIQUE clip, not one per segment.
+  //
+  // A connector is built from the outgoing dive's own clip, so five sections here
+  // expand to nine segments over four files. Creating a <video> per segment meant
+  // eight elements, two of them decoding the same bytes simultaneously, with the
+  // rAF loop seeking both every frame. Segments are sequential and never overlap on
+  // screen, so one element can serve a dive and the connector after it: the node is
+  // moved into whichever segment is closest to the viewport, keeping one decoder,
+  // one buffer and one seek target per clip.
+  // The element is shared, so its preload state is a property of the ELEMENT, not
+  // of whichever segment happens to hold it right now. Reading it off rec.video on
+  // every frame keeps that truth in one place; a per-segment `promoted` flag drifts
+  // out of sync the moment the element is re-parented, which silently strands a
+  // visible scene at preload='metadata' (frozen) or demotes a live one (stall).
+  const CLIPS = new Map();   // url -> { url, video, ready, revealed, failed, owner }
+
+  // Single source of truth for "is this file currently allowed to buffer its body".
+  const isPromoted = (s) => !!(s.video && s.video.preload === 'auto');
+
+  // How badly a segment wants a clip: lowest wins, and ownership only ever moves to
+  // a STRICTLY better-placed segment, so a later-scanned neighbour can never steal
+  // the element out from under the scene you are actually watching.
+  //
+  // Ranked in three tiers, and the order matters more than the distances:
+  //   0  the segment CONTAINING the scroll position -- the scene actually on screen;
+  //   1  a segment that is merely visible (inside the crossfade dissolve);
+  //   2  anything else, ranked by distance from its midpoint.
+  //
+  // A flat 0 for every visible segment made the outgoing dive and the incoming
+  // connector tie at the seam, and armClip's '>=' then let the outgoing dive keep
+  // the element for the whole dissolve -- the incoming scene showed its still
+  // instead of the fly-over. But tie-breaking purely on distance-to-midpoint is
+  // ALSO wrong, and worse: the connector's midpoint arrives before its start, so
+  // it would take the element ~90px BEFORE the reader crossed into it, stranding
+  // the dive they were still looking at on a still. Containment is the only rank
+  // that matches what the reader sees.
+  function claimStrength(s, y) {
+    const mid = (s.start + s.end) / 2;
+    if (y >= s.start && y < s.end) return 0;                 // the scene on screen
+    if (s.visible) return CLAIM_FADE + Math.abs(y - mid);      // fading in or out
+    return CLAIM_FAR + Math.abs(y - mid);
+  }
+  // Separators only need to exceed any distance term (segments are ~1vh wide, so
+  // |y - mid| is bounded by a few thousand px), not to be large in absolute terms.
+  const CLAIM_FADE = 1e6;
+  const CLAIM_FAR = 2e6;
+
+  function armClip(s, y) {
+    // Under prefers-reduced-motion we never load the clips at all -- the stills stay up
     // and simply cross-dissolve as you scroll. No scrubbed video motion, no decode cost.
-    if (reduce || stillOnly || s.loading || !s.clip) return;
+    if (reduce || stillOnly || s.failed || !s.clip) return;
+    const url = clipUrl(s);
+    if (!url) return;
+    let rec = CLIPS.get(url);
+    if (rec) {
+      if (rec.failed) { s.failed = true; return; }
+      if (rec.video) {
+        // Only take the element if this segment wants it more than the current holder.
+        const holder = rec.owner;
+        if (holder && holder !== s && claimStrength(s, y) >= claimStrength(holder, y)) return;
+        adopt(s, rec);
+        return;
+      }
+      // Record exists but has no element yet: it is still being built.
+      if (s.loading) return;
+    } else {
+      rec = { url: url, video: null, ready: false, revealed: false, failed: false, owner: null };
+      CLIPS.set(url, rec);
+    }
     s.loading = true;
-    // Serve the lighter mobile encode on phones when one was provided.
-    const url = (isMobile() && s.clipM) ? s.clipM : s.clip;
-    // Assign src directly instead of fetch()->blob(). The Blob path had to
-    // download the entire clip before a single frame could be decoded, so on a
-    // slow cross-border link a 3 MB scene took ~16s to become playable — the
-    // file was fine, the delivery was not. A <video> src streams progressively
-    // over the same HTTP range requests and seeks against what has arrived,
-    // without holding the whole file in memory. Same bytes, same resolution;
-    // only the transport changed. It also stays correct under file://, where a
-    // fetch() of a local mp4 is blocked by CORS and silently fell back to the
-    // still.
-    attach(s, url);
+    create(s, rec, url, 'metadata');
   }
 
-  function attach(s, src) {
+  // Move an existing element to a different segment. Segments are sequential, so
+  // the previous holder is always the one behind us on the timeline; appendChild on
+  // an existing node moves it, so no bytes are re-requested.
+  function adopt(s, rec) {
+    const v = rec.video;
+    const prev = rec.owner;
+    if (prev && prev !== s) {
+      prev.video = null; prev.hasClip = false; prev.ready = false;
+      prev.el.classList.remove('has-clip');
+    }
+    rec.owner = s;
+    s.el.appendChild(v);
+    s.video = v; s.hasClip = true; s.ready = rec.ready;
+    // Seed the playhead from where the scroll actually is, instead of inheriting
+    // whatever time the previous holder had scrubbed to. Without this, scrolling
+    // back up re-enters a scene and the clip visibly rewinds from its old position
+    // before catching up -- a fast reverse play nobody asked for.
+    s.cur = s.target;
+    // NOTE: deliberately does not set s.loading. `loading` means "a create() for
+    // this segment is still in flight"; adopt() is reusing an element that already
+    // exists. Setting it here re-armed the flag on every single frame (adopt runs
+    // on each scroll pass) and left segments stuck at loading=true forever.
+    // The 'seeked' listener below is { once: true } and keys off rec.owner, so a
+    // segment that adopts an already-revealed element has to be told it is revealed
+    // too, or it would wait forever for an event that has already been spent.
+    if (rec.revealed) s.el.classList.add('has-clip');
+  }
+
+  // First segment to ask for this url builds the element.
+  function create(s, rec, url, preload) {
     const v = document.createElement('video');
     v.className = 'sw-scene__video';
     v.muted = true; v.playsInline = true;
-    // 'auto' still downloads the clip, but *progressively* in the background:
-    // the first frame paints as soon as the opening chunk lands instead of
-    // waiting on the whole body, and later seeks are served from the buffer
-    // rather than costing a fresh range request each. That buffering is why we
-    // keep 'auto' -- dropping to 'metadata' made every scrub step a round trip.
-    // The win came from removing the Blob above, not from throttling preload.
-    v.preload = 'auto';
+    // The clip streams progressively either way: the first frame paints as soon
+    // as the opening chunk lands instead of waiting on the whole body, and later
+    // seeks are served from the buffer rather than costing a fresh range request
+    // each. What preload controls is only how much is allowed to arrive before
+    // the scene is close enough to be seen -- see ARM_VH / NEAR_VH above.
+    v.preload = preload || 'metadata';
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
-    v.src = src;
-    v.addEventListener('loadedmetadata', () => { s.ready = true; read(); });
+    v.src = url;
+    v.addEventListener('loadedmetadata', () => {
+      rec.ready = true;
+      // Also stamp the CURRENT holder. On a slow link the element is routinely
+      // re-parented from the dive to its connector before metadata lands, and the
+      // holder only ever read rec.ready at adopt time. Leaving s.ready false there
+      // meant raf() never issued a seek, so 'seeked' never fired, 'has-clip' was
+      // never added, and the scene stayed a still for the rest of the visit -- the
+      // exact symptom this whole ladder exists to fix.
+      if (rec.owner) rec.owner.ready = true;
+      // The arming segment stays flagged as 'loading' forever otherwise, which makes
+      // adopt() refuse to hand the element to a neighbour that reaches it while the
+      // metadata is still in flight. Cleared here so the handover is always allowed.
+      if (rec.owner) rec.owner.loading = false;
+      read();
+    });
     // Reveal the video (hide the still poster) only once a real frame has
     // painted — on iOS a seeked-but-never-played muted video stays blank, so
     // hiding the still on metadata alone would flash an empty scene.
-    v.addEventListener('seeked', () => { s.el.classList.add('has-clip'); }, { once: true });
+    v.addEventListener('seeked', () => {
+      rec.revealed = true;
+      const o = rec.owner; if (o) o.el.classList.add('has-clip');
+    }, { once: true });
     v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} if (userReady) primeVideo(v); });
-    v.addEventListener('error', () => { s.loading = false; s.hasClip = false; s.ready = false; });
-    s.el.appendChild(v); s.video = v; s.hasClip = true;
+    // A clip that failed must not be left in the DOM. The old handler only cleared
+    // s.loading, so the very next scroll frame rebuilt a <video> for the same
+    // failing URL: one element and one request per frame, unbounded, all competing
+    // for the bandwidth the clips that would have worked needed. Removing it
+    // degrades cleanly, because the still stays up until 'seeked' fires -- so the
+    // scene becomes a photograph rather than a blank rectangle.
+    v.addEventListener('error', () => {
+      if (v.parentNode) v.parentNode.removeChild(v);
+      rec.ready = false; rec.failed = true; rec.revealed = false;
+      if (rec.owner) {
+        rec.owner.video = null; rec.owner.hasClip = false; rec.owner.ready = false;
+        rec.owner.loading = false;
+        rec.owner.el.classList.remove('has-clip');
+      }
+      rec.owner = null;
+      // Every segment sharing this url degrades to its still. rec.url, not v.src:
+      // the src property is the browser's resolved absolute URL and would never
+      // compare equal to the relative path clipUrl() returns.
+      for (let i = 0; i < NSEG; i++) {
+        const x = SEGMENTS[i];
+        if (x.clip && clipUrl(x) === rec.url) { x.failed = true; x.loading = false; x.ready = false; }
+      }
+      CLIPS.delete(rec.url);
+    });
+    rec.video = v;
+    rec.owner = s;
+    s.el.appendChild(v); s.video = v; s.hasClip = true; s.ready = rec.ready;
+  }
+
+  // Promote an armed clip to full buffering.
+  //
+  // `preload` is a HINT, not a command, and browsers are free to re-evaluate it:
+  // in Chromium/WebKit flipping it on an element that already has a `src` usually
+  // continues the existing resource rather than restarting it, but Safari is known
+  // to be able to discard a buffer and re-fetch. So do not rely on the already-fetched
+  // metadata bytes here for correctness -- the ladder works either way:
+  //   * if the response continues, the metadata already in hand is simply reused;
+  //   * if it restarts, we pay one extra small range request, and the scene still
+  //     resolves through 'loadedmetadata' -> 'seeked' -> `has-clip`.
+  // The performance claim (fewer bytes racing for a slow link) holds in both cases.
+  // The one thing that is NOT verified here is Safari's real re-request behaviour;
+  // that wants a browser check on a real device before this is trusted outright.
+  function promoteClip(s) {
+    if (!s.video || isPromoted(s) || s.failed) return;
+    s.video.preload = 'auto';
+  }
+
+  // ...and the reverse. Without this, promotion was a one-way ratchet: once a
+  // clip reached preload='auto' it stayed there for the rest of the visit, so a
+  // reader who scrolled the whole runway ended up with ALL four hero clips
+  // downloading at once -- which is the pile-up the preload ladder was built to
+  // avoid, and the reason the homepage felt slow rather than merely heavy.
+  //
+  // The element itself is kept (so scrolling back reuses the same decoder and the
+  // bytes the HTTP cache already holds), but the browser is told it no longer needs
+  // to pull the body of a clip nobody is watching.
+  function demoteClip(s) {
+    if (!s.video || !isPromoted(s) || s.failed) return;
+    s.video.preload = 'metadata';
   }
 
   function read() {
@@ -273,9 +451,12 @@ function mountScrollWorld(container, config) {
     let ci = 0;
     for (let i = 0; i < NSEG; i++) if (y >= SEGMENTS[i].start) ci = i;
 
+    // Pass 1: geometry and opacity only. Visibility has to be settled before any
+    // clip is handed out -- armClip ranks candidate segments by how close they are
+    // to the viewport, and reading a stale s.visible from the previous frame made
+    // the dive on screen lose its element to the connector ahead of it.
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
-      if (y > s.start - 1.6 * vh && y < s.end + 1.6 * vh) loadClip(s);
       const local = clamp((y - s.start) / (s.end - s.start), 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
       let outside = 0;
@@ -283,10 +464,56 @@ function mountScrollWorld(container, config) {
       const op = smooth(1 - outside / fade);
       s.el.style.opacity = op; s.visible = op > 0.001;
       s.el.style.zIndex = (i === ci) ? '120' : String(100 + Math.round(op * 10));
-      if (!s.hasClip || !s.ready) {
+      // Keep the Ken Burns drift running for as long as the still is the thing on
+      // screen -- which is not the same as 'no clip yet'. A clip can be armed and
+      // ready but still un-revealed (waiting on its first 'seeked'), and freezing the
+      // pan at that moment makes the handoff to video look like a stall. 'has-clip'
+      // is the class that actually hides the still, so that is the thing to test.
+      if (!s.el.classList.contains('has-clip')) {
         const sc = reduce ? 1 : 1.03 + local * 0.14;
         s.img.style.transform = `translateX(${stageX - 2}vw) scale(${sc.toFixed(3)})`;
       }
+    }
+
+    // Pass 2: clips. Strongest claim first, so a shared element always lands on the
+    // segment that wants it most rather than on whichever the scan reached first.
+    const cands = [];
+    for (let i = 0; i < NSEG; i++) {
+      const s = SEGMENTS[i];
+      if (!s.clip || s.failed) continue;
+      if (y > s.start - ARM_VH * vh && y < s.end + NEAR_VH * vh) cands.push(s);
+    }
+    cands.sort((a, b) => claimStrength(a, y) - claimStrength(b, y));
+    // URLs close enough to be worth full buffering this frame. Collected across the
+    // whole segment list first, then applied in a separate pass, so a clip whose
+    // current holder has scrolled clean out of the ARM window still gets demoted
+    // (see demoteClip) instead of being promoted once and ratcheted for good.
+    const buffering = new Set();
+    for (let i = 0; i < cands.length; i++) {
+      const s = cands[i];
+      armClip(s, y);
+      // Buffer only once the scene is genuinely close: see ARM_VH / NEAR_VH.
+      //
+      // Asymmetric on purpose. The symmetric form (`s.start - N … s.end + N`)
+      // promoted a clip for its whole duration AND a further N vh after it ended,
+      // so a dive the reader had already left kept downloading, and by mid-page
+      // four of the four files were buffering at once -- exactly the bandwidth
+      // pile-up this ladder exists to prevent. A scene only earns full buffering
+      // while the reader is at (or about to reach) it, and a scene left BEHIND is
+      // what arms next: y < s.start, not y > s.start - NEAR_VH * vh.
+      //
+      // Membership is decided per URL, from the segment's own geometry, and is
+      // deliberately NOT gated on s.video: during a handover the strongest segment
+      // is armed before it necessarily owns the element, and the element's real
+      // state has to follow the scene that is on screen. Keying this off the holder
+      // instead let the outgoing dive's element be demoted while the connector was
+      // fading in over it, stalling the one scene the reader was actually watching.
+      if (y >= s.start && y < s.end + NEAR_VH * vh) buffering.add(clipUrl(s));
+    }
+    for (let i = 0; i < NSEG; i++) {
+      const s = SEGMENTS[i];
+      if (!s.video) continue;   // only the current holder of a shared element acts
+      if (buffering.has(clipUrl(s))) promoteClip(s); else demoteClip(s);
     }
 
     for (let i = 0; i < N; i++) {
@@ -349,7 +576,7 @@ function mountScrollWorld(container, config) {
   // iOS needs a user gesture before a muted video will decode/paint reliably. On the
   // first touch we prime every loaded clip (muted play→pause) so the first seek is
   // instant instead of showing a blank frame. `userReady` also makes freshly-loaded
-  // clips prime themselves (see loadClip).
+  // clips prime themselves (see the loadeddata handler in create()).
   let userReady = false;
   function primeVideo(v) {
     if (!isMobile() || !v) return;
@@ -384,6 +611,29 @@ function mountScrollWorld(container, config) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(clampCopyParallax);
   layout();
   requestAnimationFrame(raf);
+
+  // Test hook: read-only snapshot of the internal clip/segment bookkeeping.
+  // Exposed so the clip-sharing and preload ladder can be asserted from outside
+  // the IIFE without reaching into private state by guesswork. Opt-in only -- a
+  // production mount leaves nothing on the container.
+  function probe() {
+    return {
+      vh: vh,
+      stillOnly: stillOnly, reduce: reduce,
+      segments: SEGMENTS.map(function (s) {
+        return { clip: s.clip || null, start: s.start, end: s.end, visible: s.visible,
+                 hasClip: s.hasClip, ready: s.ready, loading: s.loading,
+                 failed: s.failed, promoted: isPromoted(s),
+                 videoPreload: s.video ? s.video.preload : null,
+                 parentHasClip: s.el.classList.contains('has-clip') };
+      }),
+      clips: Array.from(CLIPS.entries()).map(function (e) {
+        return { url: e[0], hasVideo: !!e[1].video, ready: e[1].ready, failed: e[1].failed,
+                 revealed: e[1].revealed, preload: e[1].video ? e[1].video.preload : null };
+      }),
+    };
+  }
+  if (config.testHooks === true) container.__swProbe = probe;
 
   // ---- helpers ----
   function el(tag, cls) { const n = document.createElement(tag); if (cls) n.className = cls; return n; }

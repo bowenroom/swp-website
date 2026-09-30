@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node test/skeleton.test.mjs && node test/link-graph.mjs"
+    "test": "node test/hero-engine.test.mjs && node test/skeleton.test.mjs && node test/link-graph.mjs"
   },
   "dependencies": {
     "astro": "^7.3.5"

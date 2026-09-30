@@ -1,7 +1,7 @@
 ---
 // The homepage scroll-film. It hands the vendored scroll-world engine a plain
 // config object and stays out of the way: the engine builds its own stage,
-// loads each clip as a seekable blob and scrubs currentTime against scroll
+// streams each clip into a <video> and scrubs currentTime against scroll
 // position. Nothing here needs to know how that works.
 //
 // Still-first is deliberate. The scene posters are real <img> elements, so the
@@ -70,7 +70,9 @@ const connectors = sections.slice(0, -1).map((s) => clipFor(SCENE_ASSETS[s.id].c
       nav: false,
       atmosphere: true,
       // Phones get the stills only: no clip is fetched, so the homepage opens
-      // fast on a mobile connection and the scroll story still reads.
+      // fast on a mobile connection and the scroll story still reads. Note this
+      // keys off viewport width (max-width: 860px) as well as pointer type, so a
+      // narrow desktop window also gets stills.
       stillOnlyMobile: true,
       sections,
       connectors,

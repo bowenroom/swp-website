@@ -4,7 +4,7 @@
 
 ## 站点身份
 
-**swp.lionpilot.tech** — 新站的唯一正式域名。部署在 GitHub Pages。旧站 `weipengshi.quarto.pub`
+**swp.lionpilot.tech** — 新站的唯一正式域名。部署在腾讯云服务器（Caddy）。旧站 `weipengshi.quarto.pub`
 降级为存档，不再更新，但**不关闭**（外链仍需可用）。
 
 **旧站** — 指 `weipengshi.quarto.pub` 及其源目录
@@ -167,8 +167,14 @@ vehicle"等可能被拟人化的主体，必须在 prompt 中**显式正面禁�
 （`/` 中文、`/en/` 英文），客户端 JS 尽量少。Kami 的排版令牌直接实现在 Astro 组件里，
 不走 Kami 的 PDF/文档流水线。
 
-**部署** — GitHub Pages，域名 `swp.lionpilot.tech`。
+**部署** — 腾讯云服务器 + Caddy，域名 `swp.lionpilot.tech`。GitHub Actions 构建后 rsync 推送，
+`--delete` 保证线上与 `dist/` 完全一致；GitHub Pages 仅作备用镜像。
 旧站 `weipengshi.quarto.pub` 保持在线，作为归档，不再更新。
+
+**清理** — 腾讯云主机由 `swp-cleanup.timer` 每日清理：journal 上限 200M、清理 dangling 镜像、
+仅清理 `ghcr.io/bowenroom/dlm` 下超过 14 天且无容器引用的 SHA 镜像、清 apt 缓存。
+不清理 volume、不清理被容器引用的镜像、不清理手工打的 rollback 镜像。
+部署前由 `swp-preflight.sh` 检查磁盘，低于 10% 可用空间直接拒绝部署。
 
 **适配** — 首版只做桌面版；手机端走静帧降级。
 

@@ -1,7 +1,16 @@
 # swp.lionpilot.tech
 
-Personal academic site for Weipeng Shi. Astro, static output, GitHub Pages.
+Personal academic site for Weipeng Shi. Astro, static output, served by Caddy on a
+Tencent Cloud host (GitHub Actions builds and rsyncs; GitHub Pages remains a
+fallback mirror only).
 Deploy with `./deploy.sh "what changed"` — see `deploy.sh` for what it does and waits for.
+
+## Host housekeeping
+
+The Tencent host runs `swp-cleanup.timer` (daily, 04:20 + jitter). Scripts and
+unit files live in `tools/server/`; they are installed on the host, not run from
+the repo. `swp-preflight.sh` gates every deploy and refuses to rsync when the
+root filesystem drops below 10% free.
 
 Domain vocabulary, settled decisions, and settled product decisions live in `CONTEXT.md`.
 Architecture decisions live in `docs/adr/`.
@@ -21,4 +30,3 @@ Default five canonical roles: `needs-triage`, `needs-info`, `ready-for-agent`,
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
-

@@ -1,13 +1,13 @@
 #!/bin/bash
 # One command to get a local edit onto swp.lionpilot.tech.
 #
-#   ./deploy.sh "what changed"     # commit everything, push, wait for Pages
+#   ./deploy.sh "what changed"     # commit everything, push, wait for the deploy
 #   ./deploy.sh --dry-run           # show what would be committed, push nothing
 #
-# GitHub Pages has no watcher on your disk: a local save changes nothing online.
-# The site only changes when a commit lands on the branch Pages is serving, then
-# the build runs (usually 1-2 min). This script does the boring part and waits for
-# the deploy to actually finish so you can trust the link it prints.
+# Nothing is watching your disk: a local save changes nothing online. The site
+# only changes when a commit lands on the branch the deploy workflow serves,
+# then the build runs (usually 1-2 min). This script does the boring part and
+# waits for the deploy to actually finish so you can trust the link it prints.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -36,24 +36,33 @@ if [ "$DRY" = 1 ]; then exit 0; fi
 say "→ pushing to $REPO ($BRANCH)"
 git push -q origin "$BRANCH" || die "push failed — run: gh auth login"
 
-# Poll the Actions run so we report a finished deploy, not just a pushed commit.
-# This site uses build_type=workflow, so the Pages build API (/pages/builds/latest)
-# returns 404 — poll the workflow run instead.
-say "→ waiting for GitHub Pages build"
-run_id=$(gh run list -R "$REPO" -L 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
-if [ -z "$run_id" ]; then
-  say "→ could not read the workflow run; skipping the wait"
-else
-  for i in $(seq 1 40); do
-    sleep 5
-    state=$(gh run view "$run_id" -R "$REPO" --json status,conclusion --jq '.status+" "+.conclusion' 2>/dev/null || echo unknown)
-    case "$state" in
-      *success*) say "→ build succeeded"; break ;;
-      *failure*|*cancelled*) die "Pages build FAILED — see: gh run view $run_id -R $REPO" ;;
-    esac
-    [ $((i % 4)) = 0 ] && echo "  …$((i * 5))s ($state)"
-  done
+# Wait for the Tencent deploy specifically. The most recent run overall may be
+# the Pages mirror, which says nothing about whether the live host got the build,
+# so the list is filtered by workflow file and matched on this commit's HEAD.
+say "→ waiting for the Tencent Cloud deploy"
+head_sha=$(git rev-parse HEAD)
+run_id=""
+for i in $(seq 1 20); do
+  run_id=$(gh run list -R "$REPO" -L 5 --workflow deploy-tencent.yml --commit "$head_sha" \
+    --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+  [ -n "$run_id" ] && [ "$run_id" != "null" ] && break
+  sleep 3
+done
+
+if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+  die "no Tencent deploy run appeared for $head_sha — check: gh run list -R $REPO"
 fi
 
+say "→ run $run_id"
+for i in $(seq 1 60); do
+  sleep 5
+  state=$(gh run view "$run_id" -R "$REPO" --json status,conclusion --jq '.status+" "+(.conclusion//"")' 2>/dev/null || echo unknown)
+  case "$state" in
+    *success*) say "→ deploy succeeded"; break ;;
+    *failure*|*cancelled*) die "Tencent deploy FAILED — see: gh run view $run_id -R $REPO" ;;
+  esac
+  [ $((i % 6)) = 0 ] && echo "  …$((i * 5))s ($state)"
+done
+
 say "→ live: $URL"
-echo "  (Pages can take another ~30s to serve the new build; hard-refresh if stale)"
+echo "  (Caddy serves the new build immediately; hard-refresh if stale)"

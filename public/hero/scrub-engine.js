@@ -232,20 +232,29 @@ function mountScrollWorld(container, config) {
     s.loading = true;
     // Serve the lighter mobile encode on phones when one was provided.
     const url = (isMobile() && s.clipM) ? s.clipM : s.clip;
-    // Under file:// the page origin is `null`, so fetch() of a local mp4 is blocked
-    // by CORS and every clip silently falls back to the still. Setting src directly
-    // lets the <video> element stream the file, which is allowed same-origin — and on
-    // a real http(s) deploy that is also the cheaper path (no full-file Blob in RAM).
-    if (location.protocol === 'file:') { attach(s, url); return; }
-    fetch(url).then(r => r.ok ? r.blob() : Promise.reject(new Error('404')))
-      .then(blob => attach(s, URL.createObjectURL(blob)))
-      .catch(() => { s.loading = false; });
+    // Assign src directly instead of fetch()->blob(). The Blob path had to
+    // download the entire clip before a single frame could be decoded, so on a
+    // slow cross-border link a 3 MB scene took ~16s to become playable — the
+    // file was fine, the delivery was not. A <video> src streams progressively
+    // over the same HTTP range requests and seeks against what has arrived,
+    // without holding the whole file in memory. Same bytes, same resolution;
+    // only the transport changed. It also stays correct under file://, where a
+    // fetch() of a local mp4 is blocked by CORS and silently fell back to the
+    // still.
+    attach(s, url);
   }
 
   function attach(s, src) {
     const v = document.createElement('video');
     v.className = 'sw-scene__video';
-    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.muted = true; v.playsInline = true;
+    // 'auto' still downloads the clip, but *progressively* in the background:
+    // the first frame paints as soon as the opening chunk lands instead of
+    // waiting on the whole body, and later seeks are served from the buffer
+    // rather than costing a fresh range request each. That buffering is why we
+    // keep 'auto' -- dropping to 'metadata' made every scrub step a round trip.
+    // The win came from removing the Blob above, not from throttling preload.
+    v.preload = 'auto';
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
     v.src = src;
     v.addEventListener('loadedmetadata', () => { s.ready = true; read(); });

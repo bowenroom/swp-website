@@ -49,6 +49,13 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H 43.159.168.127 >> ~/.ssh/known_hosts
+          # An empty secret produces a 0-byte key and a bare, very confusing
+          # "scp: Connection closed" several steps later. Fail here, with a
+          # message that names the missing secret.
+          if [ ! -s "${{ secrets.TENCENT_SSH_KEY }}" ]; then
+            echo "::error::secret TENCENT_SSH_KEY is missing or empty. Add it via: gh secret set TENCENT_SSH_KEY -R bowenroom/swp-website"
+            exit 1
+          fi
           cat > ~/.ssh/id_ed25519 <<EOF
           ${{ secrets.TENCENT_SSH_KEY }}
           EOF

@@ -49,17 +49,22 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H 43.159.168.127 >> ~/.ssh/known_hosts
-          # An empty secret produces a 0-byte key and a bare, very confusing
-          # "scp: Connection closed" several steps later. Fail here, with a
-          # message that names the missing secret.
-          if [ ! -s "${{ secrets.TENCENT_SSH_KEY }}" ]; then
-            echo "::error::secret TENCENT_SSH_KEY is missing or empty. Add it via: gh secret set TENCENT_SSH_KEY -R bowenroom/swp-website"
-            exit 1
-          fi
+          # The secret has to land in a file before it can be measured: an empty
+          # secret otherwise yields a 0-byte key and a bare, very confusing
+          # "scp: Connection closed" several steps later.
+          #
+          # Note: never test the secret inline. Actions substitutes secrets in
+          # the script body before the shell sees it, so `[ -s "${{ secrets.X }}" ]`
+          # becomes `[ -s "***" ]` -- a test of a file literally named `***`,
+          # which is always false and so reported a healthy secret as missing.
           cat > ~/.ssh/id_ed25519 <<EOF
           ${{ secrets.TENCENT_SSH_KEY }}
           EOF
           chmod 600 ~/.ssh/id_ed25519
+          if [ ! -s ~/.ssh/id_ed25519 ]; then
+            echo "::error::secret TENCENT_SSH_KEY resolved to an empty key. Add it via: gh secret set TENCENT_SSH_KEY -R bowenroom/swp-website"
+            exit 1
+          fi
 
       # Fail before rsync rather than midway through it: a deploy that dies
       # half-written leaves the live site mixing old and new assets, which is

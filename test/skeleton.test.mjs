@@ -186,6 +186,16 @@ for (const slug of POST_SLUGS) {
   check(`/blogs/${slug}/ declares zh-CN`, zh.includes('<html lang="zh-CN">'));
   check(`/en/blogs/${slug}/ declares en`, en.includes('<html lang="en">'));
 
+  // A post renders its own h1 from the collection entry. The layout used to
+  // clip a second, hidden one for any page missing `heading`, which put two
+  // top-level headings on every post. Assert both halves: exactly one h1, and
+  // it is the visible title rather than a clipped site-name placeholder.
+  const h1Count = (page) => (page.match(/<h1[\s>]/g) || []).length;
+  check(`/blogs/${slug}/ has exactly one h1`, h1Count(zh) === 1, `found ${h1Count(zh)}`);
+  check(`/en/blogs/${slug}/ has exactly one h1`, h1Count(en) === 1, `found ${h1Count(en)}`);
+  check(`/blogs/${slug}/ h1 is the visible post title`, zh.includes('<h1 class="post-title">'));
+  check(`/en/blogs/${slug}/ h1 is the visible post title`, en.includes('<h1 class="post-title">'));
+
   // The switch must land on the same post in the other language, not the
   // section index and not itself.
   check(

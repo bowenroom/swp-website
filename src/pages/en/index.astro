@@ -9,7 +9,7 @@ const lang = 'en';
 const copy = pageCopy(id, lang);
 ---
 
-<Base id={id} lang={lang} title={copy.title}>
+<Base id={id} lang={lang} title={copy.title} hiddenH1={copy.heading}>
   <Hero lang={lang} />
   <RecentUpdates lang={lang} />
 </Base>

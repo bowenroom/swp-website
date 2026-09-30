@@ -24,7 +24,7 @@ const older = order < posts.length - 1 ? posts[order + 1] : null;
 const cover = post.cover?.[lang];
 ---
 
-<Base id={id} lang={lang} title={title} heading={undefined} lede={undefined}>
+<Base id={id} lang={lang} title={title} lede={post.summary[lang]}>
   <article class="post">
     <header class="post-head">
       {cover && (

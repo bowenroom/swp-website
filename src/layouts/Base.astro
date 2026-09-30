@@ -10,7 +10,7 @@ import '../styles/kami.css';
 import { navLabel } from '../content/site.js';
 import { htmlLang, routeFor, siteName, switchHref } from '../i18n.js';
 
-const { id, lang, title, lede, heading } = Astro.props;
+const { id, lang, title, lede, heading, hiddenH1 } = Astro.props;
 
 // The page's own URL must agree with the language it claims to be written in.
 // A page living at src/pages/en/** that declares lang="zh" is a one-character
@@ -38,11 +38,12 @@ const ogLocaleAlternate = lang === 'zh' ? 'en_US' : 'zh_CN';
 // its first slash. Without this, no nav item is marked current on any post.
 const section = id.split('/')[0];
 
-// A page that renders its own visible h1 owns the document's top-level heading.
-// The homepage renders none -- its subject lives in the scroll-film copy, which
-// the engine builds at runtime as h2 -- so the layout supplies one for that page
-// alone. Otherwise the document would have no h1 at all.
-const needsHiddenH1 = !heading;
+// Pages that render their own visible h1 own the document's top-level heading
+// and pass nothing here. The homepage is the one exception: its subject lives
+// in the scroll-film copy, which the engine builds at runtime as h2, so no
+// visible heading reaches the static HTML. That page opts in explicitly with
+// `hiddenH1` rather than the layout guessing from a missing prop -- guessing
+// gave every blog post a second, clipped heading next to its real one.
 ---
 
 <!doctype html>
@@ -64,13 +65,9 @@ const needsHiddenH1 = !heading;
     <meta property="og:locale:alternate" content={ogLocaleAlternate} />
   </head>
   <body>
-    <!-- The homepage is one continuous scroll-film, so the page's real subject
-         never appears as a visible block of type. It still needs one h1 for
-         assistive tech and for the pages that index it: screen-reader users
-         would otherwise land on a document with no top-level heading at all.
-         Clipped rather than display:none, which would remove it from the
-         accessibility tree along with the visual. -->
-    {needsHiddenH1 && <h1 class="visually-hidden">{siteName(lang)}</h1>}
+    <!-- Clipped rather than display:none, which would drop the heading from
+         the accessibility tree along with the visual. -->
+    {hiddenH1 && <h1 class="visually-hidden">{hiddenH1}</h1>}
     <header class="masthead">
       <div class="masthead-inner">
         <a class="wordmark" href={routeFor('', lang)}>{siteName(lang)}</a>

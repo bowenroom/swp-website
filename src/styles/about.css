@@ -1,0 +1,277 @@
+/* About page — the personal introduction.
+ *
+ * The page carries three things the other sections do not: a portrait, a
+ * causal chain that has to read top-to-bottom as one argument, and an honest
+ * pointer to an older site. Each gets the smallest structure that makes it
+ * legible, and nothing else.
+ *
+ * Every class is `about-` prefixed. The stylesheet is imported by the page
+ * frontmatter, which makes it global to the built page rather than scoped to
+ * the component, so the prefix is what keeps the papers / blogs / courses /
+ * projects pages from inheriting it. */
+
+/* ── lead: portrait beside the identity paragraph ───────── */
+.about-lead {
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 32px;
+  grid-template-columns: 180px minmax(0, 1fr);
+  padding: 8px 0 36px;
+}
+
+.about-portrait {
+  margin: 0;
+}
+
+/* A hairline frame rather than a shadow. The portrait is a document scan, so
+ * a mount reads correctly and a drop shadow would not. */
+.about-portrait img {
+  border: 1px solid var(--border);
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.about-portrait figcaption {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.about-role {
+  color: var(--brand);
+  font-size: var(--fs-lede);
+  font-weight: 500;
+  line-height: 1.55;
+  margin: 0 0 4px;
+}
+
+.about-role-detail {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.about-lead-body p {
+  line-height: 1.65;
+  margin: 0 0 16px;
+  max-width: 60ch;
+}
+
+/* ── generic block spacing ──────────────────────────────── */
+.about-block {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 40px 0 44px;
+}
+
+.about-block h2 {
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+  margin: 0 0 14px;
+}
+
+.about-block p {
+  line-height: 1.65;
+  margin: 0 0 16px;
+  max-width: 62ch;
+}
+
+.about-block .about-intro {
+  color: var(--charcoal);
+  margin-bottom: 26px;
+}
+
+/* A subheading inside the published block, one step below the block's h2 so
+ * the two never read as siblings. */
+.about-subhead {
+  color: var(--near-black);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 28px 0 8px;
+}
+
+/* ── the causal chain ─────────────────────────────────────
+ * One column, one vertical rule, three rows. The rule is the argument: it is
+ * drawn once and each tier hangs off it, so the reader sees a single line of
+ * descent rather than three cards that could be read in any order. */
+.about-chain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.about-chain-row {
+  border-left: 1px solid var(--border);
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  margin-left: 6px;
+  padding: 0 0 28px 24px;
+  position: relative;
+}
+
+.about-chain-row:last-child {
+  padding-bottom: 0;
+}
+
+/* A small node on the rule marks where each tier attaches. It encodes the
+ * join, so it is a connector rather than decoration. */
+.about-chain-row::before {
+  background: var(--parchment);
+  border: 1px solid var(--brand);
+  border-radius: 50%;
+  content: '';
+  height: 7px;
+  left: -4px;
+  position: absolute;
+  top: 12px;
+  width: 7px;
+}
+
+/* The tier label is a short uppercase-style tag, so it is the one place wide
+ * tracking belongs; the body below it never inherits it. */
+.about-tier {
+  color: var(--brand);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  padding-top: 5px;
+}
+
+.about-chain-body h3 {
+  font-size: var(--fs-lede);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.about-chain-body p {
+  margin: 0 0 10px;
+}
+
+/* The note states the constraint that makes the tier distinct from its
+ * neighbours. Muted so it reads as a consequence of the tier above it rather
+ * than as a fourth tier. */
+.about-chain-note {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── adjacent directions ───────────────────────────────── */
+.about-also-grid {
+  display: grid;
+  gap: 28px 40px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.about-also-item h3 {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+
+.about-also-item p {
+  margin: 0;
+}
+
+/* ── published work, beside the personal photo ──────────── */
+.about-block--split {
+  align-items: start;
+  display: grid;
+  gap: 32px;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.about-photo {
+  margin: 0;
+}
+
+.about-photo img {
+  border: 1px solid var(--border);
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.about-cta {
+  border-bottom: 1px solid var(--tag-bg);
+  font-family: var(--latin);
+  padding-bottom: 1px;
+}
+
+.about-cta:hover {
+  border-bottom-color: var(--brand);
+}
+
+/* ── legacy site ────────────────────────────────────────── */
+.about-legacy {
+  border-bottom: 0;
+}
+
+.about-legacy-link {
+  border-bottom: 1px solid var(--tag-bg);
+  font-family: var(--latin);
+  padding-bottom: 1px;
+}
+
+.about-legacy-link:hover {
+  border-bottom-color: var(--brand);
+}
+
+.about-caution {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+.about-back {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  margin: 32px 0 0;
+}
+
+/* ── narrow ─────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  /* The portrait drops to a row of its own rather than shrinking to a size no
+   * one can recognise a face in. */
+  .about-lead {
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-portrait {
+    max-width: 200px;
+  }
+
+  .about-block--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-photo {
+    max-width: 260px;
+  }
+
+  /* The tier label keeps its own line on a phone: a 96px column next to a
+   * 260px body would wrap every Chinese tier name mid-word. */
+  .about-chain-row {
+    gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 18px;
+  }
+
+  .about-tier {
+    padding-top: 0;
+  }
+}

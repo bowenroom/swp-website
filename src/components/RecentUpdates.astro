@@ -1,0 +1,340 @@
+---
+// 近期动态 / Recent updates — the homepage block that replaces the old
+// `personal-ticker`.
+//
+// The reference design is a centre node wrapped in two orbit arcs, a column of
+// hairline-bordered entry cards to its left, and a hairline running out to the
+// centre to say "these belong to this person". We keep the centre node, the
+// orbits and the connector, and drop the reference's right-hand detail panel:
+// ten one-line entries cannot support a hover-to-expand panel without hiding
+// the thing the block exists to convey, and touch has no hover at all.
+//
+// Motion is a one-shot reveal on intersection, not the old ticker's 10s
+// infinite loop. An endless loop pulls the eye without informing it, and it
+// ignores prefers-reduced-motion. Kami's subtractive pass applies here too: the
+// orbit rings and the connector only stay because they encode the relationship
+// between the person and the entries.
+import { newsFor } from '../content/news.js';
+
+const { lang } = Astro.props;
+const items = newsFor(lang);
+const isZh = lang === 'zh';
+// Format at the precision the source actually supports. "2024-04-01" gets a
+// full month, "2022-11" gets a month without a day, and "2022" gets a year
+// alone — because a source that only fixes a month must not be rendered as if
+// it also fixed a day.
+const formatDate = (date) => {
+  if (/^\d{4}$/.test(date)) return date;
+  const hasDay = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  return new Intl.DateTimeFormat(isZh ? 'zh-CN' : 'en-US', {
+    // The year is always shown. The list runs from 2024 back to 2022, so a
+    // month-and-day label would leave the reader guessing which year an entry
+    // belongs to.
+    year: 'numeric',
+    month: 'short',
+    ...(hasDay ? { day: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).format(new Date((hasDay ? date : date + '-01') + 'T00:00:00Z'));
+};
+
+// The monogram in the centre disc. A CJK name gets its surname; a Latin name
+// gets its first initial, which is what the reference disc does too.
+const monogram = isZh ? '师' : 'WS';
+---
+
+<section class="news" data-news aria-labelledby="news-title">
+  <div class="news-head">
+    <h2 id="news-title">{isZh ? '近期动态' : 'Recent updates'}</h2>
+    <p class="news-sub">
+      {isZh ? `共 ${items.length} 条` : `${items.length} entries`}
+    </p>
+  </div>
+
+  <div class="news-rail">
+    <ul class="news-list">
+      {items.map((item) => (
+        <li class="news-item" data-kind={item.kind} data-date={item.date}>
+          <span class="news-kind">{item.kindLabel}</span>
+          <span class="news-body">
+            {item.href ? (
+              <a class="news-link" href={item.href} rel="noopener">
+                <span class="news-text">{item.text}</span>
+                {item.venue && <span class="news-venue">{item.venue}</span>}
+              </a>
+            ) : (
+              <span class="news-text">{item.text}</span>
+            )}
+          </span>
+          <time class="news-date" datetime={item.date}>
+            {formatDate(item.date)}
+          </time>
+        </li>
+      ))}
+    </ul>
+
+    <!--
+      The node is decorative: the name and the section heading already say who
+      this is, so it is hidden from assistive tech rather than announced twice.
+      The two rings are the reference's orbits; the connector is the hairline
+      that ties the list to the person it belongs to.
+    -->
+    <div class="news-node" aria-hidden="true">
+      <span class="news-ring news-ring-outer"></span>
+      <span class="news-ring news-ring-inner"></span>
+      <span class="news-connector"></span>
+      <span class="news-disc">
+        <span class="news-monogram">{monogram}</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .news {
+    /* The reference design sits on faint graph paper: two hairlines crossing
+     * every 32px, drawn straight into the background so the block keeps the
+     * parchment ground instead of loading a texture image. Two gradients, no
+     * request. The line is a lighter step than --border so the grid stays
+     * behind the content: a grid that competes with 12px labels stops being a
+     * ground and starts being texture the reader has to see past. */
+    background-color: var(--parchment);
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    margin-top: 64px;
+    padding: 32px 24px;
+  }
+
+  .news-head {
+    align-items: baseline;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .news-head h2 {
+    font-size: var(--fs-h3);
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .news-sub {
+    color: var(--stone);
+    font-family: var(--latin);
+    font-size: var(--fs-meta);
+    margin: 0;
+  }
+
+  /* Rail: the list is the content, the node is the anchor. On wide screens the
+   * node sits to the right of the list; below 720px it drops underneath, because
+   * a two-column rail at phone width would squeeze the entries into a column of
+   * two-word lines. */
+  .news-rail {
+    display: grid;
+    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) 132px;
+  }
+
+  .news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .news-item {
+    align-items: baseline;
+    background: var(--ivory);
+    border: 1px solid var(--border);
+    display: grid;
+    gap: 4px 12px;
+    grid-template-areas:
+      'kind date'
+      'body body';
+    grid-template-columns: auto 1fr;
+    padding: 12px 16px;
+    transition: border-color 200ms ease;
+  }
+
+  .news-item:hover {
+    border-color: var(--brand);
+  }
+
+  .news-kind {
+    color: var(--stone);
+    font-size: var(--fs-label);
+    grid-area: kind;
+    letter-spacing: 0.04em;
+  }
+
+  .news-date {
+    color: var(--stone);
+    font-family: var(--latin);
+    font-size: var(--fs-label);
+    font-variant-numeric: lining-nums tabular-nums;
+    grid-area: date;
+    justify-self: end;
+    letter-spacing: 0.02em;
+  }
+
+  .news-body {
+    grid-area: body;
+    min-width: 0;
+  }
+
+  .news-link {
+    color: var(--near-black);
+    display: block;
+  }
+
+  .news-link:hover .news-text {
+    color: var(--brand);
+  }
+
+  .news-text {
+    line-height: 1.5;
+  }
+
+  .news-venue {
+    color: var(--charcoal);
+    display: block;
+    font-family: var(--latin);
+    font-size: var(--fs-meta);
+    margin-top: 2px;
+  }
+
+  /* ── the node ───────────────────────────────────────────────── */
+  .news-node {
+    align-items: center;
+    align-self: center;
+    display: flex;
+    justify-content: center;
+    min-height: 136px;
+    position: relative;
+  }
+
+  .news-disc {
+    align-items: center;
+    background: var(--ivory);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    height: 72px;
+    justify-content: center;
+    position: relative;
+    width: 72px;
+    z-index: 1;
+  }
+
+  .news-monogram {
+    color: var(--brand);
+    font-size: var(--fs-lede);
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  /* Two concentric rings, drawn as borders rather than images so they inherit
+   * the palette and cost no request. The outer ring is clipped to a half so it
+   * reads as an orbit rather than a second disc. */
+  .news-ring {
+    border: 1px solid var(--border-soft);
+    border-radius: 50%;
+    height: 104px;
+    left: 50%;
+    margin-top: -52px;
+    position: absolute;
+    top: 50%;
+    transform: translateX(-50%);
+    width: 104px;
+  }
+
+  .news-ring-outer {
+    border-color: var(--border);
+    height: 136px;
+    margin-top: -68px;
+    width: 136px;
+  }
+
+  /* The hairline from the list toward the disc. It encodes "these updates are
+   * this person's", which is the one relationship the block is asserting. */
+  .news-connector {
+    background: var(--brand);
+    height: 1px;
+    left: -16px;
+    opacity: 0.5;
+    position: absolute;
+    right: 50%;
+    top: 50%;
+  }
+
+  /* ── motion ──────────────────────────────────────────────────────
+   * One-shot reveal, then still. `.reveal` is added by the script below only
+   * when IntersectionObserver is available; without JS the list renders
+   * visible, so a crawler or a no-script reader never gets a hidden block. */
+  @media (prefers-reduced-motion: no-preference) {
+    .news-item {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    .news-item.revealed {
+      opacity: 1;
+      transform: none;
+      transition: opacity 420ms ease, transform 420ms ease, border-color 200ms ease;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .news-rail {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .news-node {
+      display: none;
+    }
+
+    .news {
+      margin-top: 48px;
+    }
+  }
+</style>
+
+<script>
+  // Reveal-on-scroll for the entry list. Staggered by index so the list reads as
+  // a sequence rather than a single flash, and capped at six steps — past that
+  // the delay is longer than the scroll and the last entries feel broken.
+  //
+  // Scoped to this component's own section rather than queried globally: the
+  // block is a component, and a document-wide query would let a second copy on
+  // the same page observe the first copy's elements.
+  document.querySelectorAll('[data-news]').forEach((section) => {
+    const items = section.querySelectorAll('.news-item');
+    if (items.length && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const i = Number(entry.target.dataset.index || 0);
+            setTimeout(
+              () => entry.target.classList.add('revealed'),
+              Math.min(i, 6) * 60
+            );
+            io.unobserve(entry.target);
+          });
+        },
+        { rootMargin: '0px 0px -8% 0px', threshold: 0.1 }
+      );
+      items.forEach((el, i) => {
+        el.dataset.index = String(i);
+        io.observe(el);
+      });
+    } else {
+      items.forEach((el) => el.classList.add('revealed'));
+    }
+  });
+</script>

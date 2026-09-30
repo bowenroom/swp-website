@@ -1,0 +1,40 @@
+---
+// The English courses page is a pointer, not a translation.
+//
+// The course's title, subtitle, description, phase names and all twelve lesson
+// summaries exist in Chinese only — the source manifest has no English field at
+// all. Writing English versions here would mean inventing syllabus copy the
+// course author never wrote, and a reader would have no way to tell which parts
+// of the syllabus were the teacher's words and which came out of a translation
+// step. So this page states plainly what language coverage exists, says why,
+// and links to the Chinese page that carries the real content.
+import Base from '../../layouts/Base.astro';
+import { pageCopy } from '../../content/site.js';
+import { COURSES_EN_POINTER, COURSE } from '../../content/courses.js';
+import '../../styles/courses.css';
+
+const id = 'courses';
+const lang = 'en';
+const copy = pageCopy(id, lang);
+---
+
+<Base id={id} lang={lang} title={copy.title} heading={copy.heading} lede={copy.lede}>
+  <section class="course" aria-labelledby="course-lang-note">
+    <p class="course-eyebrow">{COURSE.eyebrow}</p>
+    <h2 id="course-lang-note" class="course-title">{COURSE.title}</h2>
+
+    {COURSES_EN_POINTER.body.map((paragraph) => <p class="course-description">{paragraph}</p>)}
+
+    <p class="course-links">
+      <a class="course-link" href="/courses/">
+        {COURSES_EN_POINTER.zhLinkLabel}
+        <span class="course-link-domain">/courses/</span>
+      </a>
+    </p>
+
+    <p class="course-note">
+      The course site itself, including its public index, is at{' '}
+      <a class="course-inline-link" href={COURSE.url} rel="noopener">{COURSES_EN_POINTER.courseUrlLabel}</a>.
+    </p>
+  </section>
+</Base>

@@ -1,0 +1,114 @@
+---
+// The blog index body, shared by /blogs/ and /en/blogs/ so the two languages
+// cannot drift apart in structure. Only the strings and the ordering rule
+// differ; the markup is identical by construction.
+//
+// Structure: a featured rail (the three posts marked `featured`), then one
+// collapsible row per year, newest year first. A year with a single post is
+// rendered open — a collapsed one-item accordion is a worse reading
+// experience than no accordion at all.
+import '../styles/blog.css';
+import { FEATURED, YEARS, formatDate, posts } from '../content/posts.js';
+import { routeFor } from '../i18n.js';
+import { webpFor } from '../lib/images.js';
+
+const { lang } = Astro.props;
+
+const COPY = {
+  zh: {
+    featured: '精选',
+    featuredNote: '三篇入门顺序最合适的文章',
+    archive: '全部文章',
+    archiveNote: '按年份折叠，点开看当年写下的东西。',
+    count: (n) => n + ' 篇',
+    emptyYear: '这一年还没有写下的东西。',
+    read: '阅读',
+  },
+  en: {
+    featured: 'Featured',
+    featuredNote: 'Three posts worth reading in order',
+    archive: 'All posts',
+    archiveNote: 'Collapsed by year. Open one to see what I wrote that year.',
+    count: (n) => n + (n === 1 ? ' post' : ' posts'),
+    emptyYear: 'Nothing written this year.',
+    read: 'Read',
+  },
+};
+
+const t = COPY[lang];
+
+// `posts` is already sorted newest-first by src/content/posts.js, so index 0
+// is the most recent post and `group`/year slices stay chronological.
+const byYear = YEARS.map((year) => ({
+  year,
+  entries: posts.filter((p) => p.year === year),
+}));
+
+const coverOf = (post) => post.cover?.[lang];
+---
+
+<section class="blog-featured" aria-labelledby="featured-heading">
+  <div class="blog-featured-head">
+    <h2 class="blog-section-title" id="featured-heading">{t.featured}</h2>
+    <p class="blog-card-date">{t.featuredNote}</p>
+  </div>
+
+  <div class="blog-featured-grid">
+    {FEATURED.map((post) => {
+      const cover = coverOf(post);
+      return (
+        <a class="blog-card" href={routeFor('blogs/' + post.slug, lang)}>
+          {cover && (
+            <picture>
+              {webpFor(cover.src) && (
+                <source srcset={webpFor(cover.src)} type="image/webp" />
+              )}
+              <img
+                class="blog-card-cover"
+                src={cover.src}
+                alt={cover.alt}
+                width={cover.width}
+                height={cover.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
+          )}
+          <p class="blog-card-date">
+            <time datetime={post.date}>{formatDate(post.date, lang)}</time>
+          </p>
+          <h3 class="blog-card-title">{post.title[lang]}</h3>
+          <p class="blog-card-summary">{post.summary[lang]}</p>
+        </a>
+      );
+    })}
+  </div>
+</section>
+
+<section class="blog-archive" aria-labelledby="archive-heading">
+  <div class="blog-featured-head">
+    <h2 class="blog-section-title" id="archive-heading">{t.archive}</h2>
+    <p class="blog-card-date">{t.archiveNote}</p>
+  </div>
+
+  {byYear.map(({ year, entries }) => (
+    <details class="blog-year" open={entries.length > 1}>
+      <summary>
+        <span class="blog-year-label">{year}</span>
+        <span class="blog-year-count">{t.count(entries.length)}</span>
+      </summary>
+      <div class="blog-year-body">
+        {entries.length === 0 ? (
+          <p class="blog-empty">{t.emptyYear}</p>
+        ) : (
+          entries.map((post) => (
+            <a class="blog-entry" href={routeFor('blogs/' + post.slug, lang)}>
+              <time class="blog-entry-date" datetime={post.date}>{formatDate(post.date, lang)}</time>
+              <span class="blog-entry-title">{post.title[lang]}</span>
+            </a>
+          ))
+        )}
+      </div>
+    </details>
+  ))}
+</section>

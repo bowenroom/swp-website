@@ -1,0 +1,63 @@
+---
+// The reading surface every blog post inherits: cover, title block, the prose
+// column, and the previous/next rail. Pages pass their own id ('blogs/<slug>')
+// so the language switch and the nav's current-section marker both work
+// without a page knowing either fact.
+import '../styles/blog.css';
+import Base from './Base.astro';
+import { routeFor, switchHref } from '../i18n.js';
+import { formatDate, postBySlug, posts } from '../content/posts.js';
+import { webpFor } from '../lib/images.js';
+
+const { slug, lang } = Astro.props;
+const post = postBySlug(slug);
+if (!post) throw new Error('no post with slug "' + slug + '"');
+if (!post.title[lang] || !post.summary[lang]) {
+  throw new Error('post "' + slug + '" is missing its ' + lang + ' title or summary');
+}
+
+const id = 'blogs/' + slug;
+const title = post.title[lang] + ' · ' + (lang === 'zh' ? '师威鹏' : 'Weipeng Shi');
+const order = posts.findIndex((p) => p.slug === slug);
+const newer = order > 0 ? posts[order - 1] : null;
+const older = order < posts.length - 1 ? posts[order + 1] : null;
+const cover = post.cover?.[lang];
+---
+
+<Base id={id} lang={lang} title={title} heading={undefined} lede={undefined}>
+  <article class="post">
+    <header class="post-head">
+      {cover && (
+        <picture>
+          {webpFor(cover.src) && <source srcset={webpFor(cover.src)} type="image/webp" />}
+          <img class="post-cover" src={cover.src} alt={cover.alt} width={cover.width} height={cover.height} />
+        </picture>
+      )}
+      <p class="post-meta">
+        <time datetime={post.date}>{formatDate(post.date, lang)}</time>
+        {post.tags[lang].length > 0 && <span class="post-tags">{post.tags[lang].map((t) => <span class="tag">{t}</span>)}</span>}
+      </p>
+      <h1 class="post-title">{post.title[lang]}</h1>
+      <p class="post-lede">{post.summary[lang]}</p>
+    </header>
+
+    <div class="prose">
+      <slot />
+    </div>
+
+    <nav class="post-rail" aria-label={lang === 'zh' ? '文章导航' : 'Post navigation'}>
+      {newer ? (
+        <a class="rail-link rail-newer" href={routeFor('blogs/' + newer.slug, lang)} rel="prev">
+          <span class="rail-label">{lang === 'zh' ? '更新的一篇' : 'Newer'}</span>
+          <span class="rail-title">{newer.title[lang]}</span>
+        </a>
+      ) : <span class="rail-link is-empty" />}
+      {older ? (
+        <a class="rail-link rail-older" href={routeFor('blogs/' + older.slug, lang)} rel="next">
+          <span class="rail-label">{lang === 'zh' ? '更早的一篇' : 'Older'}</span>
+          <span class="rail-title">{older.title[lang]}</span>
+        </a>
+      ) : <span class="rail-link is-empty" />}
+    </nav>
+  </article>
+</Base>

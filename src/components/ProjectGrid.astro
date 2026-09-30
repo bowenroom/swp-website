@@ -1,0 +1,92 @@
+---
+// The Projects list, and the empty state that stands in for it while
+// src/content/projects.js is empty.
+//
+// Both languages are written out here rather than run through a translator:
+// the empty state is a paragraph of English on an English page, and a literal
+// rendering of the Chinese one reads like a machine wrote it.
+import { projectsFor } from '../content/projects.js';
+
+const { lang } = Astro.props;
+const items = projectsFor(lang);
+
+const COPY = {
+  zh: {
+    label: '即将补充',
+    heading: '这里将收录我在 GitHub 上的开源项目。',
+    body:
+      '每个条目会给出仓库名、一句话简介、主语言和源码链接，封面图可选。' +
+      '页面的结构已经就绪，项目本身稍后补上。',
+    fieldsLabel: '每个条目包含',
+    fields: ['仓库名', '一句话简介', '主语言', '源码链接', '封面图（可选）'],
+  },
+  en: {
+    label: 'To be added',
+    heading: 'My open-source projects on GitHub will be collected here.',
+    body:
+      'Each entry gives the repository name, a one-line summary, its primary ' +
+      'language, and a link to the source, with optional cover artwork. The ' +
+      'structure of this page is finished; the projects themselves come later.',
+    fieldsLabel: 'Every entry carries',
+    fields: [
+      'repository name',
+      'one-line summary',
+      'primary language',
+      'link to the source',
+      'cover artwork (optional)',
+    ],
+  },
+};
+
+const copy = COPY[lang];
+---
+
+{
+  items.length > 0 ? (
+    <ul class="project-list">
+      {items.map((item) => (
+        <li class="project">
+          {item.cover && (
+            <a class="project-cover" href={item.url} tabindex="-1" aria-hidden="true">
+              <img src={item.cover} alt="" loading="lazy" decoding="async" />
+            </a>
+          )}
+
+          <div class="project-body">
+            <h2 class="project-name">
+              <a href={item.url} rel="noopener noreferrer">{item.name}</a>
+            </h2>
+
+            <p class="project-desc">{item.description}</p>
+
+            <p class="project-meta">
+              <span class="project-lang">{item.language}</span>
+              {item.year && <span class="project-year">{item.year}</span>}
+              <a class="project-link" href={item.url} rel="noopener noreferrer">
+                {lang === 'zh' ? '查看仓库' : 'View repository'}
+              </a>
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <section class="project-empty" aria-labelledby="project-empty-heading">
+      <p class="project-empty-label">{copy.label}</p>
+      <h2 class="project-empty-heading" id="project-empty-heading">
+        {copy.heading}
+      </h2>
+      <p class="project-empty-body">{copy.body}</p>
+
+      <div class="project-empty-fields">
+        <p class="project-empty-fields-label">{copy.fieldsLabel}</p>
+        <ul>
+          {copy.fields.map((field) => (
+            <li>{field}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+

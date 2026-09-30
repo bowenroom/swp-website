@@ -1,0 +1,14 @@
+---
+import Base from '../../layouts/Base.astro';
+import { pageCopy } from '../../content/site.js';
+import ProjectGrid from '../../components/ProjectGrid.astro';
+import '../../styles/projects.css';
+
+const id = 'projects';
+const lang = 'en';
+const copy = pageCopy(id, lang);
+---
+
+<Base id={id} lang={lang} title={copy.title} heading={copy.heading} lede={copy.lede}>
+  <ProjectGrid lang={lang} />
+</Base>

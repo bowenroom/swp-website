@@ -1,0 +1,79 @@
+---
+// A branded 404 rather than Astro's default. On GitHub Pages a missing URL
+// serves this file, so it is the only surface a wrong URL ever reaches — it
+// has to look like part of the site and offer a way out, not read like a
+// server error.
+import '../styles/kami.css';
+import { navLabel } from '../content/site.js';
+import { routeFor, siteName } from '../i18n.js';
+
+// 404.astro sits outside /en/, so Base's language-vs-path guard cannot apply.
+// The page is written in Chinese, matching the default language at the site
+// root, and the language switch points at the same section in English.
+const lang = 'zh';
+const NAV_IDS = ['papers', 'projects', 'blogs', 'courses', 'about'];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>页面不存在 · 师威鹏</title>
+    <meta name="description" content="这个地址没有对应的页面。" />
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <a class="wordmark" href="/">{siteName(lang)}</a>
+        <nav aria-label="主导航">
+          <ul>
+            <li><a href={routeFor('', lang)}>{navLabel(lang, 'home')}</a></li>
+            {NAV_IDS.map((n) => <li><a href={routeFor(n, lang)}>{navLabel(lang, n)}</a></li>)}
+          </ul>
+        </nav>
+        <a class="lang-switch" href="/en/" hreflang="en">EN</a>
+      </div>
+    </header>
+
+    <main>
+      <p class="lede" style="font-variant-numeric: lining-nums tabular-nums;">404</p>
+      <h1>这个页面不在这里</h1>
+      <p class="lede">
+        地址可能拼错了，或者这篇内容已经换了位置。旧站点的链接没有做重定向，如果你从那里点过来，可以从下面的入口重新找。
+      </p>
+
+      <nav class="blog-archive" aria-label="站内入口">
+        <div class="blog-year-body">
+          <a class="blog-entry" href={routeFor('', lang)}>
+            <span class="blog-entry-date">首页</span>
+            <span class="blog-entry-title">从这里开始</span>
+          </a>
+          {NAV_IDS.map((n) => (
+            <a class="blog-entry" href={routeFor(n, lang)}>
+              <span class="blog-entry-date">{navLabel(lang, n)}</span>
+              <span class="blog-entry-title">前往{navLabel(lang, n)}</span>
+            </a>
+          ))}
+          <a class="blog-entry" href="https://weipengshi.quarto.pub/" rel="noopener">
+            <span class="blog-entry-date">旧站</span>
+            <span class="blog-entry-title">weipengshi.quarto.pub</span>
+          </a>
+        </div>
+      </nav>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>© {new Date().getFullYear()} {siteName(lang)}</p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  /* The entry list borrows the archive row geometry. Imported rather than
+   * global so the rule cannot leak into any other page. */
+  @import '../styles/blog.css';
+</style>

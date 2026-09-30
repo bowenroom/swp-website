@@ -1,0 +1,90 @@
+---
+// The twelve-lesson outline, grouped by the five phases declared in the
+// manifest.
+//
+// Two things this component refuses to do:
+//   - Hide a planned lesson. Lessons 06-12 are marked `status: "planned"` in
+//     the manifest and have no deck on disk. Rendering only the five that exist
+//     would tell a reader the course is five sessions long, which is a factual
+//     error, so all twelve ship and the seven unfinished ones say so on the row.
+//   - Link a lesson. Each lesson page on the hosted course site sits behind
+//     HTTP Basic Auth, so a link here would be a promise the new site cannot
+//     keep. The whole outline is deliberately link-free; the only outbound
+//     link on the page is the public course index.
+//
+// Status is carried by the label's own value (AVAILABLE / PLANNED), never by a
+// per-lesson rule, so adding a lesson never means editing the stylesheet.
+import { COURSE, COURSE_STATS, LESSONS, PHASES } from '../content/courses.js';
+
+// The manifest's lesson order is not chronological: 01 sits in phase two and 02
+// in phase one, because the course was taught in that order. Grouping by phase
+// therefore reshuffles it, so each phase lists its lessons by id so a reader
+// following the syllabus can still find "lesson 02" where they expect it.
+const byId = (a, b) => Number(a.id) - Number(b.id);
+const phases = PHASES.map((p) => ({ ...p, lessons: [...p.lessons].sort(byId) }));
+
+// Guards against the two ways this page can silently lie: a lesson that is
+// marked available but has no measured page count, and a lesson with a count
+// that the manifest does not consider available.
+for (const l of LESSONS) {
+  if (l.available && !l.slides) throw new Error(`lesson ${l.id} is available but has no slide count`);
+  if (!l.available && l.slides) throw new Error(`lesson ${l.id} is planned but carries a slide count`);
+}
+---
+
+<section class="course" aria-labelledby="course-title">
+  <p class="course-eyebrow">{COURSE.eyebrow}</p>
+  <h2 id="course-title" class="course-title">{COURSE.title}</h2>
+  <p class="course-subtitle">{COURSE.subtitle}</p>
+  <p class="course-description">{COURSE.description}</p>
+
+  <p class="course-summary">
+    <b>{COURSE_STATS.lessons}</b> 次课
+    <span class="sep" aria-hidden="true">·</span>
+    <span class="course-summary-item">{COURSE_STATS.available} 次已上线，共 <b>{COURSE_STATS.slides}</b> 页</span>
+    <span class="sep" aria-hidden="true">·</span>
+    <span class="course-summary-item">{COURSE_STATS.planned} 次计划中</span>
+  </p>
+
+  <ol class="course-phases">
+    {
+      phases.map((phase) => (
+        <li class="course-phase">
+          <h3 class="course-phase-name">{phase.name}</h3>
+          <ol class="course-lessons">
+            {phase.lessons.map((lesson) => (
+              <li class:list={['course-lesson', lesson.available ? 'is-available' : 'is-planned']}>
+                <div class="course-lesson-head">
+                  <span class="course-lesson-no">{lesson.id}</span>
+                  <h4 class="course-lesson-title">{lesson.title}</h4>
+                  {lesson.available ? (
+                    <span class="course-lesson-meta">
+                      <span class="course-badge">{lesson.slides} 页</span>
+                      <span class="course-status">已上线</span>
+                    </span>
+                  ) : (
+                    <span class="course-lesson-meta">
+                      <span class="course-status course-status--planned">计划中</span>
+                    </span>
+                  )}
+                </div>
+                <p class="course-lesson-summary">{lesson.summary}</p>
+              </li>
+            ))}
+          </ol>
+        </li>
+      ))
+    }
+  </ol>
+
+  <p class="course-note">
+    课程站点提供每课的完整讲义与幻灯片，课时页面需要密码访问，因此本站只保留课程简介与大纲，不复制课时内容。
+  </p>
+
+  <p class="course-links">
+    <a class="course-link" href={COURSE.url} rel="noopener">
+      前往课程站点
+      <span class="course-link-domain">llm.lionpilot.tech</span>
+    </a>
+  </p>
+</section>

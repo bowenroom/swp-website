@@ -3,9 +3,16 @@
 
 # Agent/design-harness scratch state, not site content.
 .impeccable/
+.omo/
 
 # Engineering specs, tickets, and research drafts. Local markdown issue tracker.
 .scratch/
 
 # OS noise
 .DS_Store
+
+# Astro build output + dependencies
+node_modules/
+dist/
+.astro/
+npm-debug.log*

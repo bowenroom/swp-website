@@ -1,0 +1,252 @@
+/* Courses page — the course header and the twelve-lesson outline.
+ *
+ * The page's whole job is to be read as a syllabus: a reader should be able to
+ * scan down the twelve lessons and see, per row, which session it is, what it
+ * covers, how long it is, and whether it exists yet. So the outline is a
+ * hairline-divided list rather than a card grid — rows separated by 1px rules
+ * and vertical space scan faster than twelve boxes, and they cost the page no
+ * shadows (Kami's subtractive rule: no decoration that carries no information).
+ *
+ * Every class is `course-` prefixed. The stylesheet is imported by the page
+ * frontmatter, so it is global to the built page; the prefix is what keeps the
+ * blogs / papers / projects pages from inheriting it. */
+
+/* ── header ─────────────────────────────────────────────── */
+.course {
+  /* The layout's .lede carries no bottom margin, so without this the eyebrow
+   * lands ~8px under it and reads as a second line of the page lede instead of
+   * as the start of the course header. 32px is one clear step on the ladder. */
+  margin-top: 32px;
+}
+
+/* Uppercase micro-label tier: the one place wide tracking is correct, because
+ * it is a short Latin label rather than running prose. */
+.course-eyebrow {
+  color: var(--stone);
+  font-family: var(--latin);
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.course-title {
+  font-size: var(--fs-h2);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.35;
+  margin: 0 0 8px;
+}
+
+/* The subtitle is the course's own one-line claim, quoted verbatim from the
+ * manifest, so it takes the lede step and the muted colour rather than a
+ * heading treatment that would compete with the page h1 above it. */
+.course-subtitle {
+  color: var(--charcoal);
+  font-size: var(--fs-lede);
+  line-height: 1.6;
+  margin: 0 0 16px;
+  max-width: 60ch;
+}
+
+.course-description {
+  line-height: 1.7;
+  margin: 0 0 20px;
+  max-width: 68ch;
+}
+
+/* ── summary line ───────────────────────────────────────── */
+.course-summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin: 0;
+  padding-bottom: 14px;
+}
+
+/* The counts are the substantive claim of this line (twelve sessions, five of
+ * them live, 239 pages), so they take the ink-blue accent and tabular figures
+ * rather than the surrounding grey. */
+.course-summary b {
+  color: var(--brand);
+  font-family: var(--latin);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 500;
+}
+
+.course-summary .sep {
+  color: var(--border);
+  margin: 0 10px;
+}
+
+/* ── phases ─────────────────────────────────────────────── */
+.course-phases,
+.course-lessons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.course-phase {
+  padding: 32px 0 8px;
+}
+
+.course-phase-name {
+  color: var(--brand);
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+  margin: 0 0 4px;
+}
+
+/* ── lesson rows ────────────────────────────────────────── */
+.course-lesson {
+  border-top: 1px solid var(--border-soft);
+  /* 5pt of vertical padding is Kami's floor for a divided row; anything less
+   * and the hairline reads as an underline of the line above it. */
+  padding: 18px 0 20px;
+}
+
+.course-lesson:last-child {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.course-lesson-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+/* The lesson number is a two-digit ordinal, not prose: it takes the Latin
+ * stack and tabular figures so the column of numbers stays aligned. */
+.course-lesson-no {
+  color: var(--stone);
+  font-family: var(--latin);
+  font-size: var(--fs-meta);
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.5;
+  min-width: 2ch;
+}
+
+.course-lesson-title {
+  flex: 1 1 auto;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.course-lesson-meta {
+  align-items: baseline;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.course-lesson-summary {
+  color: var(--charcoal);
+  font-size: var(--fs-meta);
+  /* 1.65, not 1.5: these summaries are dense CJK runs broken on the ｜
+   * separator, so they wrap at narrow widths and need the leading. */
+  line-height: 1.65;
+  margin: 4px 0 0 2ch;
+  max-width: 64ch;
+}
+
+/* ── status ─────────────────────────────────────────────── */
+/* The page count is a measurement, so it gets the quiet hairline badge. */
+.course-badge {
+  border: 1px solid var(--border);
+  color: var(--charcoal);
+  font-family: var(--latin);
+  font-size: var(--fs-label);
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.4;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.course-status {
+  color: var(--brand);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* A planned lesson is not a lesser lesson, so it is not greyed into
+ * invisibility. It keeps the same ink-blue label as a live one and is
+ * distinguished only by its wording — which is the honest signal, since the
+ * difference is whether the deck exists, not how important the session is. */
+.course-status--planned {
+  color: var(--stone);
+}
+
+/* A planned lesson's summary is still the authored course copy, so it stays at
+ * full contrast. Only the row's own chrome recedes. */
+.course-lesson.is-planned .course-lesson-title {
+  color: var(--charcoal);
+  font-weight: 400;
+}
+
+/* ── note and link ──────────────────────────────────────── */
+.course-note {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+  margin: 28px 0 0;
+  max-width: 64ch;
+}
+
+.course-links {
+  margin: 20px 0 0;
+}
+
+.course-link {
+  border-bottom: 1px solid var(--tag-bg);
+  display: inline-block;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  padding-bottom: 1px;
+}
+
+.course-link:hover {
+  border-bottom-color: var(--brand);
+}
+
+.course-link-domain {
+  font-family: var(--latin);
+  font-size: var(--fs-meta);
+  margin-left: 6px;
+}
+
+/* A link that runs inside a sentence (the English page names the course site in
+ * a note) needs the underline to belong to the line, not to sit under it as a
+ * separate block, so it inherits the text's own line-height. */
+.course-inline-link {
+  border-bottom: 1px solid var(--tag-bg);
+  font-family: var(--latin);
+}
+
+.course-inline-link:hover {
+  border-bottom-color: var(--brand);
+}
+
+/* ── narrow ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .course-summary .sep {
+    margin: 0 6px;
+  }
+
+  /* The lesson number shares a line with the title at every width; below this
+   * one the number drops to its own line and the summary's 2ch indent no longer
+   * aligns with anything, so both go to zero. */
+  .course-lesson-summary {
+    margin-left: 0;
+  }
+}

@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import RecentUpdates from '../components/RecentUpdates.astro';
+import Hero from '../components/Hero.astro';
+import { pageCopy } from '../content/site.js';
+
+const id = '';
+const lang = 'zh';
+const copy = pageCopy(id, lang);
+---
+
+<Base id={id} lang={lang} title={copy.title}>
+  <Hero lang={lang} />
+  <RecentUpdates lang={lang} />
+</Base>

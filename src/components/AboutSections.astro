@@ -1,0 +1,80 @@
+---
+// The About page body, shared by both language trees.
+//
+// Copy comes from src/content/about.js and the page passes the whole thing in,
+// so this component never decides what language it is rendering. Every string
+// that reaches the DOM is plain prose from that file — no headings, labels or
+// links are invented here, because a bilingual page that grows its own
+// vocabulary in a shared component is exactly how the two trees start to drift.
+import { routeFor } from '../i18n.js';
+
+const { lang, copy } = Astro.props;
+
+// The chain is rendered in the order the file declares: application, object,
+// means. The layout draws them as one column joined by a single vertical rule,
+// so the visual order and the causal order cannot diverge.
+---
+
+<section class="about-lead">
+  <figure class="about-portrait">
+    <img src={copy.identity.portrait} alt={copy.identity.portraitAlt} width="480" height="600" />
+    <figcaption>{copy.identity.name}</figcaption>
+  </figure>
+  <div class="about-lead-body">
+    <p class="about-role">{copy.identity.role}</p>
+    <p class="about-role-detail">{copy.identity.roleDetail}</p>
+    {copy.bio[0].p.map((para) => <p>{para}</p>)}
+  </div>
+</section>
+
+<section class="about-block" aria-labelledby="about-chain">
+  <h2 id="about-chain">{copy.bio[1].h}</h2>
+  {copy.bio[1].p.map((para) => <p class="about-intro">{para}</p>)}
+
+  <ol class="about-chain">
+    {copy.chain.map((link) => (
+      <li class="about-chain-row">
+        <span class="about-tier">{link.tier}</span>
+        <div class="about-chain-body">
+          <h3>{link.title}</h3>
+          <p>{link.body}</p>
+          <p class="about-chain-note">{link.note}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<section class="about-block" aria-labelledby="about-also">
+  <h2 id="about-also">{copy.alsoDoing.h}</h2>
+  <div class="about-also-grid">
+    {copy.alsoDoing.items.map((item) => (
+      <div class="about-also-item">
+        <h3>{item.title}</h3>
+        <p>{item.body}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+<section class="about-block about-block--split" aria-labelledby="about-published">
+  <figure class="about-photo">
+    <img src="/about/profile.jpg" alt={lang === 'zh' ? '师威鹏的个人照片' : 'A personal photograph of Weipeng Shi'} width="600" height="400" loading="lazy" />
+  </figure>
+  <div class="about-published-body">
+    <h2 id="about-published">{copy.published.h}</h2>
+    <p>{copy.published.lead}</p>
+    <p><a class="about-cta" href={copy.published.ctaHref}>{copy.published.cta} →</a></p>
+    <h3 class="about-subhead">{copy.service.h}</h3>
+    <p>{copy.service.body}</p>
+  </div>
+</section>
+
+<section class="about-block about-legacy" aria-labelledby="about-legacy">
+  <h2 id="about-legacy">{copy.legacy.h}</h2>
+  <p>{copy.legacy.body}</p>
+  <p><a class="about-legacy-link" href={copy.legacy.href} rel="noopener noreferrer" target="_blank">{copy.legacy.linkLabel}</a></p>
+  <p class="about-caution">{copy.legacy.caution}</p>
+</section>
+
+<p class="about-back"><a href={routeFor('', lang)}>← {lang === 'zh' ? '回到首页' : 'Back to home'}</a></p>

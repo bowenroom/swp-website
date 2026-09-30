@@ -1,9 +1,7 @@
 name: Deploy site to GitHub Pages
 
-# GitHub Pages' REST API only accepts / or /docs as a publishing source, but an
-# Actions workflow can publish any directory. That keeps the site rooted at
-# prototype/ (so / is the hero and /papers/ + /blogs/ are subpaths) and keeps the
-# 62 MB of archived v1 footage in archive/ out of the deployed bundle for free.
+# Publishes the Astro build output (dist/). The legacy hand-written prototype/
+# and the 62 MB of archived v1 footage in archive/ stay out of the bundle.
 on:
   push:
     branches: [main]
@@ -28,9 +26,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # The skeleton suite builds the site and asserts on the emitted HTML:
+      # 12 bilingual routes, bidirectional language switch, canonical/hreflang,
+      # and Kami tokens in the shared layout. Run it before publishing so a
+      # broken skeleton can never reach Pages.
+      - name: Test
+        run: npm test
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: prototype
+          path: dist
 
       - id: deployment
         uses: actions/deploy-pages@v4

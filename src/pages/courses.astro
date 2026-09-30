@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import CourseOutline from '../components/CourseOutline.astro';
+import { pageCopy } from '../content/site.js';
+import '../styles/courses.css';
+
+const id = 'courses';
+const lang = 'zh';
+const copy = pageCopy(id, lang);
+---
+
+<Base id={id} lang={lang} title={copy.title} heading={copy.heading} lede={copy.lede}>
+  <CourseOutline />
+</Base>

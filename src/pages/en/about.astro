@@ -1,0 +1,16 @@
+---
+import Base from '../../layouts/Base.astro';
+import AboutSections from '../../components/AboutSections.astro';
+import { aboutCopy } from '../../content/about.js';
+import { pageCopy } from '../../content/site.js';
+import '../../styles/about.css';
+
+const id = 'about';
+const lang = 'en';
+const copy = pageCopy(id, lang);
+const about = aboutCopy(lang);
+---
+
+<Base id={id} lang={lang} title={copy.title} heading={copy.heading} lede={copy.lede}>
+  <AboutSections lang={lang} copy={about} />
+</Base>

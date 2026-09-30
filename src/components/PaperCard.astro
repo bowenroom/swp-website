@@ -1,0 +1,102 @@
+---
+// One publication, rendered from a record produced by papersFor(lang) (so it
+// already carries `title`, `abstractText` and `caption` for this language).
+//
+// The impact labels are data and are rendered as badges rather than weakened
+// into grey metadata (CONTEXT.md, 期刊分区标注). Q1 and 中科院一区 TOP assert a
+// lead result and get the solid ink-blue badge; IF and the remaining 分区
+// labels are measurements and get the hairline badge.
+import { isLead } from '../content/papers.js';
+
+const { paper, lang } = Astro.props;
+const isZh = lang === 'zh';
+
+// The site owner. Marked in the byline so a reader can tell at a glance which
+// papers are theirs without cross-referencing the author list.
+const OWNER = 'Weipeng Shi';
+
+// Whether a given impact value is prominent. Rather than re-writing the rule
+// here, the single value is routed through isLead() so the "Q1 or 一区TOP"
+// test lives in exactly one place (content/papers.js). Passing the value in as
+// the only populated field reduces isLead() to "is this value Q1 or 一区TOP".
+const isProminent = (value) =>
+  isLead({ impact: { jcrq: value, cas: '' } }) || isLead({ impact: { jcrq: '', cas: value } });
+
+// Impact badges, in the order a reader scans them: authorship, then the impact
+// factor, then the two partition labels. IF is never prominent (it is a
+// measurement); the two partition labels are prominent exactly when they say
+// Q1 / 一区TOP.
+const badges = [
+  { value: `IF=${paper.impact.if}`, prominent: false },
+  { value: paper.impact.jcrq, prominent: isProminent(paper.impact.jcrq) },
+  { value: paper.impact.cas, prominent: isProminent(paper.impact.cas) },
+];
+
+const roleLabel = paper.firstAuthor
+  ? isZh
+    ? '第一作者'
+    : 'First author'
+  : isZh
+    ? '合作者'
+    : 'Collaborator';
+
+// All paper dates are full ISO days, so the citation shows month + year — a
+// publication is identified by its issue, not by a specific day.
+const formatDate = (date) =>
+  new Intl.DateTimeFormat(isZh ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(date + 'T00:00:00Z'));
+---
+
+<article class="paper">
+  <h2 class="paper-title">{paper.title}</h2>
+
+  <p class="paper-authors">
+    {paper.authors.map((name, i) => (
+      <>
+        {i > 0 && <span class="paper-author-sep">, </span>}
+        <span
+          class:list={[
+            'paper-author',
+            { 'paper-author--first': i === 0 },
+            { 'paper-author--owner': name === OWNER },
+          ]}
+        >
+          {name}
+        </span>
+      </>
+    ))}
+  </p>
+
+  <p class="paper-venue">
+    <em>{paper.venue}</em>, {paper.volume}
+    <span class="paper-venue-sep">·</span>
+    <time class="paper-date" datetime={paper.date}>{formatDate(paper.date)}</time>
+  </p>
+
+  <div class="paper-badges">
+    <span class="paper-badge paper-badge--role">{roleLabel}</span>
+    {badges.map((b) => (
+      <span class:list={['paper-badge', { 'paper-badge--lead': b.prominent }]}>
+        {b.value}
+      </span>
+    ))}
+  </div>
+
+  <p class="paper-abstract-label">{isZh ? '摘要' : 'Abstract'}</p>
+  <p class="paper-abstract">{paper.abstractText}</p>
+
+  <figure class="paper-figure">
+    <img src={paper.figure} alt={paper.caption} loading="lazy" />
+    <figcaption class="paper-figcaption">{paper.caption}</figcaption>
+  </figure>
+
+  <p class="paper-links">
+    <a class="paper-link" href={paper.paperHref} rel="noopener" target="_blank">
+      [{isZh ? '论文' : 'Paper'}]
+    </a>
+    <a class="paper-link" href={paper.doi} rel="noopener" target="_blank">[DOI]</a>
+  </p>
+</article>

@@ -1,0 +1,225 @@
+/* Papers page — the publication list.
+ *
+ * The impact labels (IF / JCRQ / 中科院分区) are the substantive signal of an
+ * academic identity, so they are rendered as badges rather than weakened into
+ * grey metadata. Two of them — JCR Q1 and 中科院一区 TOP — state a lead result
+ * and get the solid ink-blue badge; IF and the remaining 分区 labels state a
+ * measurement and get the hairline badge. The distinction is carried by the
+ * label's own value (see badgesFor in PaperCard.astro), never by a per-paper
+ * rule, so adding a paper never requires editing this file.
+ *
+ * Every class is `paper-` prefixed. This stylesheet is imported by the page
+ * frontmatter, which makes it global to the built page rather than scoped to
+ * the component, so the prefix is what keeps the blogs / courses / projects
+ * pages from inheriting it.
+ *
+ * The figures are wide landscape network diagrams (1675x746, 1287x781,
+ * 1500x823). The old site squeezed them into a 232px side column, which is
+ * why they read as decoration rather than as method; here they get the full
+ * measure, because a network structure diagram is unreadable at thumbnail
+ * size. */
+
+/* ── summary ─────────────────────────────────────────────── */
+.papers-summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin: 24px 0 0;
+  padding-bottom: 14px;
+}
+
+.papers-summary b {
+  color: var(--brand);
+  font-family: var(--latin);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 500;
+}
+
+/* The separator is a hairline glyph rather than a styled span, so it carries
+ * no font size of its own and cannot drift off the ladder. */
+.papers-summary .sep {
+  color: var(--border);
+  margin: 0 10px;
+}
+
+/* ── list ────────────────────────────────────────────────── */
+.paper-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.paper {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 32px 0 36px;
+}
+
+.paper:last-child {
+  border-bottom: 0;
+}
+
+/* ── heading block ───────────────────────────────────────── */
+.paper-title {
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.paper-authors {
+  color: var(--charcoal);
+  font-family: var(--latin);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+  margin: 0 0 6px;
+}
+
+/* The lead author is set darker and one step heavier than the co-authors, so
+ * the byline reads in order without needing a legend. */
+.paper-author--first {
+  color: var(--near-black);
+  font-weight: 500;
+}
+
+/* The site owner. Where the lead author IS the owner the two rules compose —
+ * brand colour plus the heavier weight — so the reader sees one name carrying
+ * both facts rather than two overlapping marks. */
+.paper-author--owner {
+  color: var(--brand);
+  font-weight: 500;
+}
+
+/* The comma between authors is a plain character rather than generated
+ * content, so a screen reader reads "Shi, Qin, Yun" instead of pausing
+ * between two spans with no separator. */
+.paper-author-sep {
+  color: var(--stone);
+}
+
+/* Venue, volume and date on one line: the citation facts a reader checks
+ * first, kept together so they are never split across a wrap. */
+.paper-venue {
+  color: var(--stone);
+  font-family: var(--latin);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+.paper-venue em {
+  font-style: italic;
+}
+
+.paper-venue-sep {
+  color: var(--border);
+  margin: 0 8px;
+}
+
+.paper-date {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ── badges ──────────────────────────────────────────────── */
+.paper-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 20px;
+}
+
+.paper-badge {
+  border: 1px solid var(--border);
+  color: var(--charcoal);
+  font-family: var(--latin);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+/* Q1 and 中科院一区 TOP: solid ink-blue on ivory. This is the one place the
+ * accent is used as a fill, which is what makes it read as emphasis rather
+ * than as another label. */
+.paper-badge--lead {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--ivory);
+}
+
+/* Authorship is a fact about the byline, not a measure of the venue, so it is
+ * set a step quieter than the impact labels: filled with --inline-bg and
+ * greyed to --stone. */
+.paper-badge--role {
+  background: var(--inline-bg);
+  color: var(--stone);
+}
+
+/* ── abstract ────────────────────────────────────────────── */
+.paper-abstract-label {
+  color: var(--stone);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  margin: 0 0 6px;
+}
+
+.paper-abstract {
+  line-height: 1.65;
+  margin: 0 0 24px;
+  max-width: 68ch;
+}
+
+/* ── figure ──────────────────────────────────────────────── */
+.paper-figure {
+  margin: 0 0 20px;
+}
+
+.paper-figure img {
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  display: block;
+  height: auto;
+  padding: 8px;
+  width: 100%;
+}
+
+.paper-figcaption {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* ── links ───────────────────────────────────────────────── */
+.paper-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+}
+
+.paper-link {
+  border-bottom: 1px solid var(--tag-bg);
+  font-family: var(--latin);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  padding-bottom: 1px;
+}
+
+.paper-link:hover {
+  border-bottom-color: var(--brand);
+}
+
+/* ── narrow ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .paper {
+    padding: 26px 0 28px;
+  }
+
+  /* The author list is a comma run of Latin names; at phone width it breaks
+ * mid-name without this, leaving a single given name on its own line. */
+  .paper-authors {
+    overflow-wrap: break-word;
+  }
+}

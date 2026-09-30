@@ -1,0 +1,198 @@
+/* Projects page — the project list and its empty state.
+ *
+ * Kami's subtractive pass governs this file: a line survives only if it does
+ * real work. The list uses hairline separators to group entries, the empty
+ * state uses one box because it is a distinct region on the page rather than
+ * a card among cards, and there are no eyebrow ticks, side accents or callout
+ * fills anywhere. Hierarchy comes from the type ladder and from the space
+ * above each block.
+ *
+ * Every class is `project-` prefixed. The page imports this stylesheet from
+ * its frontmatter, which makes it global to the built page rather than scoped
+ * to the component, so the prefix is what keeps the papers / blogs / courses
+ * pages from inheriting it. */
+
+/* ── list ──────────────────────────────────────────────────── */
+.project-list {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+}
+
+.project {
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 24px;
+  padding: 32px 0 36px;
+}
+
+.project:last-child {
+  border-bottom: 0;
+}
+
+/* The cover is a fixed-ratio thumbnail beside the text, not a full-bleed
+ * banner: a repository is identified by its name and description first, and a
+ * wide image would push that pair below the fold on the first entry. */
+.project-cover {
+  flex: 0 0 200px;
+  line-height: 0;
+}
+
+.project-cover img {
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border);
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.project-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.project-name {
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.project-name a {
+  color: var(--near-black);
+}
+
+.project-name a:hover {
+  color: var(--brand);
+}
+
+.project-desc {
+  color: var(--charcoal);
+  line-height: 1.65;
+  margin: 8px 0 0;
+  max-width: 56ch;
+}
+
+/* Meta sits on one hairline row: the primary language is the only value worth
+ * prominence, the year is a quiet count, and the link is the action. */
+.project-meta {
+  align-items: baseline;
+  color: var(--stone);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--fs-meta);
+  gap: 4px 16px;
+  line-height: 1.5;
+  margin: 16px 0 0;
+}
+
+.project-lang {
+  color: var(--brand);
+  font-family: var(--latin), var(--serif);
+}
+
+.project-year {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.project-link {
+  border-bottom: 1px solid var(--border);
+  margin-left: auto;
+}
+
+.project-link:hover {
+  border-bottom-color: var(--brand);
+}
+
+/* ── empty state ─────────────────────────────────────────────
+ * This is the page's designed resting state, not an error and not a
+ * placeholder. It states what the page is for, says plainly that the
+ * projects come later, and shows the shape of an entry — so a visitor reads
+ * intent, and the owner reads the contract they will fill in. */
+.project-empty {
+  border: 1px solid var(--border);
+  margin-top: 40px;
+  padding: 40px 32px 36px;
+}
+
+.project-empty-label {
+  color: var(--brand);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.project-empty-heading {
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  max-width: 40ch;
+}
+
+.project-empty-body {
+  color: var(--charcoal);
+  line-height: 1.65;
+  margin: 12px 0 0;
+  max-width: 56ch;
+}
+
+/* The field list is the last thing on the page and the quietest: it reads as a
+ * footnote on how an entry is shaped, so it sits behind a hairline and keeps
+ * the meta step. */
+.project-empty-fields {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 32px;
+  padding-top: 20px;
+}
+
+.project-empty-fields-label {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.project-empty-fields ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.project-empty-fields li {
+  color: var(--charcoal);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+/* Hairline separators, not bullets — a dash glyph here would be an ornament
+ * carrying no information. The 8px gutter is what separates the values. */
+.project-empty-fields li + li {
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+}
+
+/* ── narrow screens ──────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .project {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .project-cover {
+    flex-basis: auto;
+  }
+
+  .project-link {
+    margin-left: 0;
+  }
+
+  .project-empty {
+    padding: 32px 24px;
+  }
+}
+

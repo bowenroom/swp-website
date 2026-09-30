@@ -1,0 +1,37 @@
+---
+import Base from '../../layouts/Base.astro';
+import PaperCard from '../../components/PaperCard.astro';
+import { pageCopy } from '../../content/site.js';
+import { papersFor } from '../../content/papers.js';
+import '../../styles/papers.css';
+
+const id = 'papers';
+const lang = 'en';
+const copy = pageCopy(id, lang);
+// papersFor(lang) throws if a paper is missing this language's title, abstract
+// or caption, so a half-translated record fails the build rather than shipping
+// a Chinese abstract under an English heading.
+const papers = papersFor(lang);
+// Sorted newest-first by date. papersFor preserves the source order, which is
+// chronological today, but the list reads as a publication timeline and should
+// not depend on someone remembering to insert in the right place.
+const sorted = [...papers].sort((a, b) => b.date.localeCompare(a.date));
+---
+
+<Base id={id} lang={lang} title={copy.title} heading={copy.heading} lede={copy.lede}>
+  <p class="papers-summary">
+    <b>{sorted.length}</b> papers
+    <span class="sep" aria-hidden="true">|</span>
+    <b>{sorted.filter((p) => p.firstAuthor).length}</b> as first author
+    <span class="sep" aria-hidden="true">|</span>
+    <b>{new Set(sorted.map((p) => p.venue)).size}</b> journals
+  </p>
+
+  <ol class="paper-list">
+    {sorted.map((paper) => (
+      <li>
+        <PaperCard paper={paper} lang={lang} />
+      </li>
+    ))}
+  </ol>
+</Base>

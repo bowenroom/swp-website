@@ -1,0 +1,103 @@
+---
+// The one layout every page inherits. It owns three things no page should
+// repeat: the Kami token stylesheet, the masthead nav + language switch, and
+// the <head> metadata (lang / title / canonical).
+//
+// `id` is the language-neutral page id from src/i18n.js ('' for home). `lang`
+// is the language THIS page is written in. The switch therefore always points
+// at routeFor(id, otherLang) — never at a hand-guessed path.
+import '../styles/kami.css';
+import { navLabel } from '../content/site.js';
+import { htmlLang, routeFor, siteName, switchHref } from '../i18n.js';
+
+const { id, lang, title, lede, heading } = Astro.props;
+
+// The page's own URL must agree with the language it claims to be written in.
+// A page living at src/pages/en/** that declares lang="zh" is a one-character
+// typo away, and it ships a Chinese page under /en/ with a Chinese canonical
+// and a language switch pointing at itself — all green. Astro routes from the
+// file path, so the directory is the authority; this cross-checks the literal.
+const pathIsEnglish = /\/en\//.test(Astro.url.pathname);
+if (pathIsEnglish !== (lang === 'en')) {
+  throw new Error(
+    `language mismatch: ${Astro.url.pathname} declares lang="${lang}". ` +
+      'Pages under src/pages/en/ must use lang="en"; all others "zh".'
+  );
+}
+
+const NAV_IDS = ['papers', 'projects', 'blogs', 'courses', 'about'];
+const langLabel = lang === 'zh' ? 'EN' : '中文';
+const canonical = new URL(routeFor(id, lang), Astro.site).href;
+const alternateHref = new URL(switchHref(id, lang), Astro.site).href;
+// OG locale codes are not the same strings as HTML lang: Open Graph wants
+// zh_CN / en_US with underscores. A social card that omits them silently
+// falls back to the platform default instead of the page's real language.
+const ogLocale = lang === 'zh' ? 'zh_CN' : 'en_US';
+const ogLocaleAlternate = lang === 'zh' ? 'en_US' : 'zh_CN';
+// A blog post's id is 'blogs/<slug>', so the current section is the id up to
+// its first slash. Without this, no nav item is marked current on any post.
+const section = id.split('/')[0];
+
+// A page that renders its own visible h1 owns the document's top-level heading.
+// The homepage renders none -- its subject lives in the scroll-film copy, which
+// the engine builds at runtime as h2 -- so the layout supplies one for that page
+// alone. Otherwise the document would have no h1 at all.
+const needsHiddenH1 = !heading;
+---
+
+<!doctype html>
+<html lang={htmlLang(lang)}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={lede} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang={htmlLang(lang)} href={canonical} />
+    <link rel="alternate" hreflang={lang === 'zh' ? 'en' : 'zh-CN'} href={alternateHref} />
+    <link rel="alternate" hreflang="x-default" href={new URL(routeFor(id, 'zh'), Astro.site).href} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={lede} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={ogLocaleAlternate} />
+  </head>
+  <body>
+    <!-- The homepage is one continuous scroll-film, so the page's real subject
+         never appears as a visible block of type. It still needs one h1 for
+         assistive tech and for the pages that index it: screen-reader users
+         would otherwise land on a document with no top-level heading at all.
+         Clipped rather than display:none, which would remove it from the
+         accessibility tree along with the visual. -->
+    {needsHiddenH1 && <h1 class="visually-hidden">{siteName(lang)}</h1>}
+    <header class="masthead">
+      <div class="masthead-inner">
+        <a class="wordmark" href={routeFor('', lang)}>{siteName(lang)}</a>
+        <nav aria-label={lang === 'zh' ? '主导航' : 'Main'}>
+          <ul>
+            <li><a href={routeFor('', lang)} aria-current={section === '' ? 'page' : undefined}>{navLabel(lang, 'home')}</a></li>
+            {NAV_IDS.map((n) => (
+              <li><a href={routeFor(n, lang)} aria-current={section === n ? 'page' : undefined}>{navLabel(lang, n)}</a></li>
+            ))}
+          </ul>
+        </nav>
+        <a class="lang-switch" href={switchHref(id, lang)} hreflang={lang === 'zh' ? 'en' : 'zh-CN'}>
+          {langLabel}
+        </a>
+      </div>
+    </header>
+
+    <main>
+      {heading && <h1>{heading}</h1>}
+      {lede && <p class="lede">{lede}</p>}
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>© {new Date().getFullYear()} {siteName(lang)}</p>
+      </div>
+    </footer>
+  </body>
+</html>

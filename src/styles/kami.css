@@ -1,0 +1,276 @@
+/* Kami visual language — the shared layout's design tokens.
+ *
+ * Parchment ground, a single ink-blue accent, serif-dominant type. These are
+ * deliberate, user-confirmed choices (see CONTEXT.md), so they live in one
+ * place and every page inherits them rather than re-declaring a palette.
+ *
+ * The cream ground is intentional, not the reflex "warm off-white" default:
+ * it is the Kami palette (#f5f4ed), matched 1:1 from the reference site.
+ *
+ * Every size below is a named step on the --fs ladder, never a value picked ad
+ * hoc. Kami's "ladder discipline" is the reason: two components that each
+ * choose their own size drift into 15.5 / 16.5 neighbours, and a reader cannot
+ * tell a 16 from a 17, so the difference registers as noise instead of
+ * hierarchy. Adding a role means adding a step, not editing a call site. */
+
+:root {
+  /* ── screen type ladder (px) ─────────────────────────────────
+   * Derived from Kami's print scale (px ~= pt x 1.33) and re-stepped for a
+   * reading surface. Two floors from references/design.md hold: web text
+   * >= 12px, and 12px carries uppercase micro-labels only, never prose. */
+  --fs-label: 12px; /* micro-labels and badges — never prose */
+  --fs-meta: 13px; /* captions, footer, figure notes */
+  --fs-body: 15px; /* running prose */
+  --fs-lede: 16px; /* section lede, and the masthead nav */
+  --fs-h3: 18px;
+  --fs-h2: 22px; /* also the wordmark */
+  --fs-h1: 30px;
+
+  --parchment: #f5f4ed;
+  --ivory: #faf9f5;
+  --inline-bg: #f0eee6;
+  --border: #e8e6dc;
+  --border-soft: #e5e3d8;
+  /* One step fainter than --border: reserved for ground-level texture such as
+   * the homepage news grid, where a line must read as paper rather than as a
+   * border. Anything that divides content should use --border instead. */
+  --grid-line: #efede5;
+  --brand: #1b365d;
+  --brand-tint: #eef2f7;
+  --tag-bg: #e4ecf5;
+  --near-black: #141413;
+  --dark-warm: #3d3d3a;
+  --charcoal: #4d4c48;
+  --stone: #6b6a64;
+  --measure: 720px;
+  --serif: 'TsangerJinKai02', 'Source Han Serif SC', 'Source Han Serif CN', 'Noto Serif CJK SC',
+    'Noto Serif SC', 'Songti SC', 'STSong', Georgia, serif;
+  --latin: Charter, 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  /* Single serif per page: --sans always equals --serif. */
+  --sans: var(--serif);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--parchment);
+  color: var(--near-black);
+  font-family: var(--serif);
+  /* Lock the serif to its two real weights. Without this the browser
+   * synthesizes a 600/700 the family has no file for, which is exactly the
+   * faux-bold Kami forbids. */
+  font-synthesis: none;
+  font-size: var(--fs-body);
+  /* CJK screen body sits at the top of Kami's 1.55-1.65 band: the glyphs are
+   * denser than Latin at the same px, so they need the extra leading. */
+  line-height: 1.65;
+  margin: 0;
+  padding: 0 20px;
+}
+
+/* Chinese body carries 0.3pt of tracking; English carries none. One rule per
+ * language beats a hand-set value per element, because the alternative is a
+ * CJK-tuned tracking value leaking onto Latin text and opening up its word
+ * spaces. */
+html[lang='zh-CN'] body {
+  letter-spacing: 0.4px;
+}
+
+html[lang='en'] body {
+  letter-spacing: 0;
+}
+
+/* English pages get the Charter-led stack, Chinese pages keep the CJK-led one.
+ * One stack for both languages means a Latin word on a Chinese page borrows CJK
+ * metrics (wider, and tracked), and the mixed run stops reading as one voice. */
+html[lang='en'] {
+  --serif: Charter, 'Iowan Old Style', Georgia, Palatino, 'Times New Roman', serif;
+}
+
+/* Chinese display text (24px+) needs optical spacing to open the glyphs up;
+ * English display text stays at 0. */
+html[lang='zh-CN'] h1 {
+  letter-spacing: 0.4px;
+}
+
+/* A Chinese lede at 16px is body-scale display text, and Kami opens it by
+ * 0.03-0.06em so the paragraph does not set solid. */
+html[lang='zh-CN'] .lede {
+  letter-spacing: 0.04em;
+}
+
+/* Label and caption tiers tighten up as the type gets smaller. */
+.lang-switch,
+.placeholder-note,
+.site-footer {
+  line-height: 1.4;
+}
+
+/* Every number the site renders is a count or a year, not a figure in running
+ * text — lining tabular figures keep columns from drifting between renders. */
+.site-footer {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+img,
+figure {
+  max-width: 100%;
+}
+
+a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.wrap {
+  max-width: var(--measure);
+  margin: 0 auto;
+}
+
+/* ── masthead ─────────────────────────────────────────────── */
+.masthead {
+  border-bottom: 1px solid var(--border);
+}
+
+.masthead-inner {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: var(--measure);
+  padding: 28px 0 20px;
+}
+
+/* 500, not 600: Kami allows a serif exactly two weights, and 600 makes the
+ * browser synthesize a bold the font family does not actually carry. */
+.wordmark {
+  color: var(--near-black);
+  font-size: var(--fs-h2);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.masthead nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The nav is primary wayfinding, so it takes the lede step rather than the body
+ * step. Two-glyph CJK labels need the extra size to hold their shape, and this
+ * is the size the reference site renders its own nav at. */
+.masthead nav a {
+  color: var(--dark-warm);
+  font-size: var(--fs-lede);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.masthead nav a:hover {
+  color: var(--brand);
+}
+
+/* The underline is the current-page indicator, so it encodes state rather than
+ * decorating. A background pill would compete with the wordmark for attention. */
+.masthead nav a[aria-current='page'] {
+  border-bottom: 1px solid var(--brand);
+  color: var(--brand);
+}
+
+.lang-switch {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--charcoal);
+  /* The switch renders "中文" on the English site, so the stack needs a CJK
+   * fallback — a Latin-only stack leaves those two glyphs to chance. */
+  font-family: var(--latin), 'TsangerJinKai02', 'Source Han Serif SC', 'Songti SC', serif;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  /* Small-label tracking (+0.2 to +0.5px), not the wide tracking that breaks
+   * the character group on a two-glyph CJK label. */
+  letter-spacing: 0.02em;
+  padding: 4px 16px;
+  text-decoration: none;
+}
+
+.lang-switch:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* ── main ──────────────────────────────────────────────────── */
+main {
+  margin: 0 auto;
+  max-width: var(--measure);
+  padding: 48px 0 96px;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin: 0 0 16px;
+}
+
+.lede {
+  color: var(--charcoal);
+  font-size: var(--fs-lede);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 56ch;
+}
+
+/* No side rule and no callout box. Under Kami's subtractive pass a border that
+ * only decorates carries no information, so hierarchy comes from the muted
+ * color and the space above it instead. */
+.placeholder-note {
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  margin-top: 40px;
+  padding-left: 0;
+  max-width: 56ch;
+}
+
+/* ── footer ────────────────────────────────────────────────── */
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--stone);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  margin: 0 auto;
+  max-width: var(--measure);
+  padding: 20px 0 40px;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+/* ── visually hidden ────────────────────────────────────────── */
+/* Present for assistive tech and crawlers, absent from the visual page. The
+ * clip keeps the text in the accessibility tree, which display:none and
+ * visibility:hidden would not. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

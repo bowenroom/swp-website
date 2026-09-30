@@ -1,0 +1,100 @@
+---
+// The homepage scroll-film. It hands the vendored scroll-world engine a plain
+// config object and stays out of the way: the engine builds its own stage,
+// loads each clip as a seekable blob and scrubs currentTime against scroll
+// position. Nothing here needs to know how that works.
+//
+// Still-first is deliberate. The scene posters are real <img> elements, so the
+// first paint never waits on a video, and on a phone -- where stillOnlyMobile
+// is on -- no clip is ever requested at all.
+import { HERO } from '../content/hero.js';
+
+const { lang = 'zh' } = Astro.props;
+const copy = HERO[lang];
+
+// A null id must stay null: the engine treats any non-empty string as a real
+// clip to fetch, so 'null.mp4' would turn a still scene into a broken one.
+const clipFor = (id) => (id ? `/hero/vid/${id}.mp4` : null);
+const stillFor = (id) => `/hero/${id}.jpg`;
+const stillMobileFor = (id) => `/hero/${id}-mobile.jpg`;
+
+// Five stills were generated (one per scene) but only four clips exist: the
+// closing decision scene is carried by its still and the copy, which is the
+// right place for the two CTAs to land. Each scene therefore names its own
+// still and its own clip, and the decision scene simply has no clip.
+const SCENE_ASSETS = {
+  establish: { still: 'k0-establish', clip: 's1-approach' },
+  road: { still: 'k1-road', clip: 's2-sensing' },
+  sensing: { still: 'k2-sensing', clip: 's3-fusion' },
+  fusion: { still: 'k3-fusion', clip: 's4-decision' },
+  decision: { still: 'k4-decision', clip: null },
+};
+
+const sections = copy.sections.map((s) => {
+  const asset = SCENE_ASSETS[s.id];
+  return {
+    ...s,
+    still: stillFor(asset.still),
+    stillMobile: stillMobileFor(asset.still),
+    clip: asset.clip ? clipFor(asset.clip) : null,
+  };
+});
+
+// One connector per gap, reusing the outgoing scene's clip. A null entry is
+// explicitly allowed: the engine then crossfades straight into the next dive
+// instead of playing a fly-over, which is what the clip-less decision scene
+// needs anyway.
+const connectors = sections.slice(0, -1).map((s) => clipFor(SCENE_ASSETS[s.id].clip));
+---
+
+<div class="hero-film" id="world" data-lang={lang}></div>
+
+<script is:inline define:vars={{ sections, connectors, copy, stillOnlyMobile: true, lang }}>
+  // The engine ships as a plain script under /hero/, so it is loaded on demand
+  // rather than bundled: nothing above the fold needs it, and it is ~15 KB.
+  const boot = async () => {
+    if (!window.mountScrollWorld) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = '/hero/scrub-engine.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    const world = document.getElementById('world');
+    if (!world || !window.mountScrollWorld) return;
+    window.mountScrollWorld(world, {
+      brand: copy.brand,
+      hint: copy.hint,
+      nav: false,
+      atmosphere: true,
+      // Phones get the stills only: no clip is fetched, so the homepage opens
+      // fast on a mobile connection and the scroll story still reads.
+      stillOnlyMobile: true,
+      sections,
+      connectors,
+      diveScroll: 1.25,
+      connScroll: 0.85,
+      crossfade: 0.14,
+    });
+    world.dataset.heroReady = '1';
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+</script>
+
+<style>
+  /* The engine injects its own namespaced CSS; this only reserves the scroll
+     runway it drives, so the page reserves height before the script lands and
+     the page does not jump when it does. */
+  .hero-film {
+    position: relative;
+    width: 100%;
+    min-height: 100svh;
+    background: var(--surface, #f7f6f3);
+  }
+</style>

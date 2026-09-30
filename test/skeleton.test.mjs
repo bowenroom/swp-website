@@ -31,11 +31,13 @@ console.log('building…');
 // Telemetry writes to ~/Library/Preferences on first run; CI and sandboxes may
 // not be able to create it, and a missing preferences dir must not fail a build
 // that is otherwise correct.
-execFileSync('npm', ['run', 'build'], {
-  cwd: root,
-  stdio: 'inherit',
-  env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' },
-});
+if (!process.env.SWP_SKIP_BUILD) {
+  execFileSync('npm', ['run', 'build'], {
+    cwd: root,
+    stdio: 'inherit',
+    env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' },
+  });
+}
 
 console.log('\nroutes');
 const ROUTES = ['', 'papers', 'projects', 'blogs', 'courses', 'about'];

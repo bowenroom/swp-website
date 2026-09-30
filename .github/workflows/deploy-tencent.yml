@@ -1,0 +1,91 @@
+name: Deploy site to Tencent Cloud
+
+# Publishes the Astro build to the Caddy server at Tencent Cloud instead of
+# GitHub Pages. GitHub Pages hard-codes `cache-control: max-age=600` and
+# refuses custom cache headers, so the hero clips were re-validated on every
+# visit; serving from our own host lets Caddy set real cache lifetimes.
+#
+# The build still runs here rather than on the server: the server only ever
+# receives finished files, needs no toolchain, and `git push` stays the single
+# deploy trigger.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push supersedes an in-flight deploy, so the server never receives
+# files from two builds at once.
+concurrency:
+  group: deploy-tencent
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Same gate as before publishing: the suite builds the site and asserts
+      # on the emitted HTML (bilingual routes, language switch, canonical,
+      # hreflang, one h1 per page, image/link integrity).
+      - name: Test
+        run: npm test
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 43.159.168.127 >> ~/.ssh/known_hosts
+          cat > ~/.ssh/id_ed25519 <<EOF
+          ${{ secrets.TENCENT_SSH_KEY }}
+          EOF
+          chmod 600 ~/.ssh/id_ed25519
+
+      # Fail before rsync rather than midway through it: a deploy that dies
+      # half-written leaves the live site mixing old and new assets, which is
+      # worse than not deploying. The host runs around 79% full, so this trips
+      # while there is still room to recover, not at 99%.
+      - name: Disk preflight
+        run: |
+          scp -q -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new \
+            tools/server/swp-preflight.sh ubuntu@43.159.168.127:/tmp/swp-preflight.sh
+          ssh -i ~/.ssh/id_ed25519 ubuntu@43.159.168.127 'bash /tmp/swp-preflight.sh'
+
+      # --delete makes the server an exact mirror of dist/, so a removed page
+      # cannot linger. --checksum compares content, not timestamps, which keeps
+      # the 44 MB of unchanged video and images off the wire on every deploy.
+      # The trailing / matters: it copies the *contents* of dist/ into the
+      # target directory.
+      #
+      # --chmod is load-bearing, not a nicety. This checkout lives on an SMB
+      # volume where every file is mode 700, while caddy runs as its own
+      # unprivileged user. Without it, rsync -a faithfully reproduces those 700s
+      # and Caddy cannot read the site at all: every route returns 404. That
+      # already happened once, so the mode is pinned here instead of being
+      # repaired by hand on the server, where the next deploy would undo it.
+      - name: Deploy to server
+        run: |
+          rsync -az --delete --checksum --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
+            dist/ ubuntu@43.159.168.127:/var/www/swp/
+
+      - name: Verify
+        run: |
+          # test -x on the root directory is the regression guard: a 700 root
+          # means caddy cannot traverse into the tree, which is exactly how the
+          # site went dark while every file was present on disk.
+          ssh -i ~/.ssh/id_ed25519 ubuntu@43.159.168.127 \
+            'test -x /var/www/swp && test -r /var/www/swp/index.html && test -f /var/www/swp/hero/vid/s1-approach.mp4'

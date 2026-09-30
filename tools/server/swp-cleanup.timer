@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily bounded housekeeping for the swp.lionpilot.tech host
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

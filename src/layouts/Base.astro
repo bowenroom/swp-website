@@ -52,6 +52,16 @@ const section = id.split('/')[0];
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Declared, not left to the browser's guess: without these the tab falls
+         back to GET /favicon.ico and a modern browser that gets a 404 draws a
+         generic page icon. The .ico covers the legacy path (it is a real file,
+         so the default request also succeeds), the PNG is what Chromium picks
+         for the tab, and the touch icon is what iOS saves to the home screen.
+         All three come from public/brand/lion-avatar.png — the same mark the
+         film's topbar uses, so the tab and the page never disagree. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/brand/lion-avatar.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>{title}</title>
     <meta name="description" content={lede} />
     <link rel="canonical" href={canonical} />

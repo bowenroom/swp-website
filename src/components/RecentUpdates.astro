@@ -332,13 +332,22 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     --dock-news-h: max(120px, min(262px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
   }
 
-  /* Five rows visible, dissolving at both ends. The mask is what makes the
-   * column read as a window onto a moving list rather than a list someone
-   * forgot to finish — the recording fades a card out at the top and another
-   * in at the bottom instead of hard-clipping them. */
+  /* Roughly four rows crisp at the designed height, dissolving at both ends.
+   * The mask is what makes the column read as a window onto a moving list
+   * rather than a list someone forgot to finish — the recording fades a card
+   * out at the top and another in at the bottom instead of hard-clipping them.
+   *
+   * The bands are a fixed 12px, not a percentage. Measured on the real card:
+   * the rail is 261px tall and a row is 59px, so the old 11%/89% (29px, almost
+   * half a row) sat ON TOP OF the row's text — the date line box starts 11px
+   * into the row, so from 11px to 29px the type you were reading was being
+   * faded, and the entry under the cursor looked greyed out and cut off. At
+   * 12px the band covers the row's hairline and its top padding and stops
+   * exactly where the text begins, so a row's ink is legible from the moment
+   * it clears the rail's edge while the edge still dissolves. */
   .dock-viewport {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 11%, #000 89%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 11%, #000 89%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
     height: var(--dock-news-h);
     overflow: hidden;
   }

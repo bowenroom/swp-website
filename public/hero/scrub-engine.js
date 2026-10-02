@@ -1052,11 +1052,19 @@ function injectCSS() {
    * of the page. The section that follows already sits immediately after the
    * runway, so there is no empty gap to reclaim anyway. */
   `;
-  // Wrap in a cascade layer so the page's own theme tokens (unlayered
-  // :root / .sw-root { --sw-bg / --sw-ink / --sw-accent … }) always win over
-  // these defaults, regardless of injection order. Enables clean dark themes.
+  // NOT wrapped in a cascade layer. It used to be (`@layer sw { … }`), on the
+  // theory that unlayered page tokens should beat these defaults — but a layer
+  // loses to EVERY unlayered rule regardless of specificity, and this site's
+  // base sheet has `a { color: var(--brand) }`. The result was that every link
+  // in the film silently took the site's brand navy: the primary CTA rendered
+  // as navy-on-ink (unreadable), `.sw-brand` and `.sw-btn--ghost` traded their
+  // own colours for it too, and no amount of specificity inside the layer
+  // could win. Every selector in `css` is `.sw-` scoped, so nothing here can
+  // leak outward, and specificity now resolves conflicts the ordinary way.
+  // A page that wants to retheme the film's tokens must outrank `.sw-root`
+  // (e.g. `:root .sw-root { --sw-ink: … }`) rather than rely on being unlayered.
   const style = document.createElement('style'); style.id = 'sw-css';
-  style.textContent = '@layer sw {\n' + css + '\n}';
+  style.textContent = css;
   document.head.appendChild(style);
 }
 

@@ -919,6 +919,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     };
 
     const open = (id, row) => {
+      disarm();   // a row that re-arms the leave timer must also cancel it
       if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
       if (!fill(id)) return;
       // Follow the pointer down the rail: the preview is pinned to the card's top
@@ -956,27 +957,69 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       if (row) row.classList.add('is-hot');
     };
 
-    // `pointer-events: none` on the preview means the pointer never actually
-    // enters it, so a plain leave handler would dismiss the card the moment
-    // the reader crossed the 14px gap between the rail and the preview — the
-    // one move the preview exists to survive. The gap sits INSIDE this
-    // section, so a leave whose relatedTarget is still within the section is
-    // the reader crossing the gap, not leaving: hold the card and let the next
-    // row's enter (or the section's own leave) decide.
-    const close = (e) => {
-      if (e && e.relatedTarget && dock.contains(e.relatedTarget)) return;
+    // The panel is allowed to stay open in exactly three places: the row list
+    // that opened it, the panel itself, and the 14px gap between them. The gap
+    // is measured rather than queried because it is nothing but film — no
+    // element there reports being hovered, so a relatedTarget check alone
+    // would dismiss the panel on the one move it exists to survive.
+    const allowed = (el, e) => {
+      if (preview.hidden) return false;
+      if (el && ((newsEl && newsEl.contains(el)) || preview.contains(el))) return true;
+      if (!e) return false;
+      const r = preview.getBoundingClientRect();
+      const pad = 20;
+      return e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
+             e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
+    };
+
+    const collapse = () => {
       if (hideTimer) return;
       preview.classList.remove('is-open');
       if (newsEl) newsEl.classList.remove('is-paused');
       dock.querySelectorAll('.dock-row.is-hot').forEach((r) => r.classList.remove('is-hot'));
-      // A short delay on top of the gap check, so a fast diagonal that leaves
-      // and re-enters within a frame or two does not make the card flash.
+      // A short delay, so a fast diagonal that leaves and re-enters within a
+      // frame or two does not make the card flash.
       hideTimer = setTimeout(() => {
         preview.hidden = true;
         current = null;
         hideTimer = null;
       }, 220);
     };
+
+    // The pointer-leave decision, deferred. Armed on every move that lands
+    // outside the allowed region, disarmed the moment it lands back inside.
+    let leaveTimer = 0;
+    const arm = () => {
+      if (leaveTimer) return;
+      leaveTimer = setTimeout(() => { leaveTimer = 0; collapse(); }, 260);
+    };
+    const disarm = () => {
+      if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = 0; }
+    };
+
+    const close = (e) => {
+      if (e && allowed(e.relatedTarget, e)) { disarm(); return; }
+      // A pointer crossing from a row to the panel passes through places that
+      // are neither — the card's lower half, the 14px gap — so collapsing on
+      // the first of them would shut the panel mid-transit. Pointer paths ARM
+      // a short timer instead; anything that reaches the allowed region again
+      // disarms it. Keyboard paths (blur, Escape) have no transit to protect
+      // and collapse at once.
+      if (e && e.type && e.type.indexOf('pointer') === 0) { arm(); return; }
+      disarm();
+      collapse();
+    };
+
+    // While the panel is open the pointer must stay in the list, the panel, or
+    // the gap between them. One move handler settles every path, because a
+    // pointer can leave the row and re-enter the card's other half without ever
+    // firing the panel's own leave — and `.dock` spans the whole first screen,
+    // so the section-level leave alone let the panel sit there until the reader
+    // scrolled off the screen.
+    window.addEventListener('pointermove', (e) => {
+      if (preview.hidden) { disarm(); return; }
+      if (allowed(e.target, e)) disarm(); else arm();
+    }, { passive: true });
 
     dock.querySelectorAll('[data-dock-item]').forEach((btn) => {
       const id = btn.dataset.id;

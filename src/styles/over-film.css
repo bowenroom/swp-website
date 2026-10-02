@@ -59,11 +59,11 @@
   /* The reading pages set a centred measure by offsetting `main` from the
    * left, so the text column sits in the middle of the viewport. That is right
    * for prose and wrong here: on this page the film already owns the full
-   * width, and the dock is meant to be pinned to the LEFT edge so the rest of
-   * the screen belongs to the video. Inheriting the offset pushed the card to
-   * the middle of the screen, where it covers the subject of the scene. The
-   * dock sets its own viewport-relative gutter, so here `main` contributes
-   * no horizontal placement at all. */
+   * width, and the dock is meant to be pinned to the RIGHT edge — the film's
+   * copy column owns the left — so `main` contributes no horizontal placement
+   * at all. Inheriting the offset would have put the card in the middle of the
+   * screen, covering the subject of the scene. The dock sets its own
+   * viewport-relative gutter. */
   margin-left: 0;
   max-width: none;
 }

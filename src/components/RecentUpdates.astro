@@ -15,10 +15,13 @@
 //
 // This version is the arrangement the user actually asked for, and it is a
 // different SHAPE rather than a third set of numbers: the film keeps the whole
-// viewport, and the news becomes one compact card pinned to the left edge. The
-// research tree moves INSIDE that card, under the news, because the right half
-// of the screen now belongs to the video. Nothing here spans more than ~400px,
-// so at no point does the content compete with the film for attention.
+// viewport, and the news becomes one compact card pinned to the RIGHT edge.
+// The research tree moves INSIDE that card, under the news, because the copy
+// column is what owns the left half of the screen — every section's kicker,
+// title, body and CTAs are left-aligned with a wash behind them, so a card on
+// the left sat on top of them as the reader scrolled out of the first screen
+// (先看清楚, 再谈判断 in particular). Nothing here spans more than ~400px, so at
+// no point does the content compete with the film for attention.
 //
 // COLOURS ARE read off the recording (1280x868) rather than chosen:
 //   card fill #fbf5eb · border #d3cfc4 · panel fill #fff9ef · border #cfcbc1
@@ -244,7 +247,14 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
      * window and no single hard-coded number is right at every width. */
     align-content: center;
     display: grid;
-    justify-items: start;
+    /* The card sits on the RIGHT. The film's copy is left-aligned — every
+     * section's kicker/title/body/CTA stack against the left gutter with a
+     * wash behind them — so a card on the left landed on top of it: "先看清楚,
+     * 再谈判断" and the dock's news rows were fighting for the same column as
+     * the reader scrolled out of the first screen. The right side of the film
+     * is empty by construction (the route rail is the only thing over there),
+     * which is where this belongs. */
+    justify-items: end;
     min-height: calc(100svh - var(--dock-mast, 141px));
     padding: 20px 0 24px;
   }
@@ -268,9 +278,22 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     -webkit-backdrop-filter: blur(12px) saturate(118%);
     background: color-mix(in srgb, var(--dock-card) 90%, transparent);
     border: 1px solid var(--dock-hair);
-    /* Pinned to the LEFT edge with a viewport-relative gutter, never centred:
-     * the right two thirds of the screen belong to the film. */
-    margin-left: clamp(20px, 4vw, 64px);
+    /* Pinned to the RIGHT edge with a viewport-relative gutter, never centred:
+     * the copy column belongs to the left of the screen. The gutter is sized
+     * against the film's route furniture rather than picked by eye. That rail
+     * is 34px wide and sits `clamp(14px, 2.4vw, 30px)` off the right edge, and
+     * EVERY dot hangs a label pill off its own left side — the pills are
+     * absolutely positioned, so they reach ~49px (建立) to ~102px (Coordination)
+     * further left than the rail's box, into exactly the band a right-pinned
+     * card would occupy.
+     *
+     * It is a CONSTANT, not a clamp, because the thing it clears is constant:
+     * the rail's own offsets are px-clamped, so measuring the widest pill's
+     * left edge at 1920/1440/1180/980/921/900/861 gives 176/176/174/169/168/
+     * 167/166px of required inset — flat to within 10px while 13vw would have
+     * swung from 112 to 250 across the same range. 180 clears the worst case
+     * with the scrollbar either present or overlaid, in both languages. */
+    margin-right: 180px;
     max-width: calc(100vw - 40px);
     padding: 20px 0;
     position: relative;
@@ -526,23 +549,26 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
   .dock-tree__row { color: var(--dock-ink-soft); }
 
   /* ── hover preview ──────────────────────────────────────────────── */
-  /* Positioned against .dock-card, so `left: 100%` is the card's right edge and
-   * the preview always opens to the RIGHT of the rail: over the film, never
-   * over the news it is describing.
+  /* Positioned against .dock-card, so `right: 100%` is the card's LEFT edge and
+   * the preview opens INWARD, over the film: never over the news it is
+   * describing. The card is pinned to the RIGHT edge of the screen, so opening
+   * outward would push 276px of panel straight off the viewport. The 14px gap
+   * is now to the left of the card, and it is the same gap the leave handler
+   * below has to survive.
    *
    * `pointer-events` is off while closed and back on once open, so the card can
    * never intercept a click meant for the film, but the reader CAN move the
    * pointer onto an open preview — which is what makes the "read the paper"
-   * link reachable, and what makes crossing the 14px gap survivable. */
+   * link reachable, and what makes crossing the gap survivable. */
   .dock-preview {
     background: var(--dock-panel);
     border: 1px solid var(--dock-panel-hair);
-    left: 100%;
-    margin-left: 14px;
+    margin-right: 14px;
     opacity: 0;
     padding: 10px;
     pointer-events: none;
     position: absolute;
+    right: 100%;
     top: 0;
     transform: translateY(6px);
     transition: opacity 0.18s ease, transform 0.18s ease;
@@ -662,13 +688,19 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       --dock-news-h: max(104px, min(210px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
       padding: 18px 0 22px;
     }
-    .dock-card { width: min(288px, 44vw); }
+    /* 240px, not the 288px this used to be. Pinned to the right edge with the
+     * 180px gutter the route labels need, a 288px card's left edge lands at
+     * 901..980px's copy (which ends at 423..461) with 2–9px to spare — less
+     * than the scrollbar itself. 240 buys 40–90px of air on the copy side
+     * while leaving 166px+ on the label side, which is the side with the
+     * smaller budget. */
+    .dock-card { width: min(240px, 28vw); }
     .dock-tree__group-label,
     .dock-tree__row { font-size: 12px; }
-    /* No room to the right of a 288px card on a 900px window, so the preview
-     * opens over the card's own right half instead of beside it. It is still
+    /* No room to the left of a 240px card on a 900px window, so the preview
+     * opens over the card's own left half instead of beside it. It is still
      * pointer-transparent, so nothing is ever unreachable underneath it. */
-    .dock-preview { margin-left: 10px; width: min(252px, calc(100vw - 40px)); }
+    .dock-preview { margin-right: 10px; width: min(252px, calc(100vw - 40px)); }
   }
 
   /* Phone: the film degrades to stills, so the card becomes the page. The
@@ -681,7 +713,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       min-height: 0;
       padding: 88px 0 56px;
     }
-    .dock-card { margin-left: 0; width: min(92%, 380px); }
+    .dock-card { margin-inline: 0; width: min(92%, 380px); }
     .dock-viewport {
       -webkit-mask-image: none;
       height: auto;

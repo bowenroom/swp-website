@@ -278,6 +278,11 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     -webkit-backdrop-filter: blur(12px) saturate(118%);
     background: color-mix(in srgb, var(--dock-card) 90%, transparent);
     border: 1px solid var(--dock-hair);
+    /* Elevation rather than a bigger border: the card sits ON the film, and a
+     * contact shadow plus a wide ambient one is what tells the eye it is a
+     * separate plane. Both offsets are non-zero — a single blurred halo with no
+     * offset reads as a glow, not as paper over video. */
+    box-shadow: var(--shadow-soft);
     /* Pinned to the RIGHT edge with a viewport-relative gutter, never centred:
      * the copy column belongs to the left of the screen. The gutter is sized
      * against the film's route furniture rather than picked by eye. That rail
@@ -563,6 +568,9 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
   .dock-preview {
     background: var(--dock-panel);
     border: 1px solid var(--dock-panel-hair);
+    /* One step deeper than the card it hovers over, so the stacking order is
+     * legible without reading the border. */
+    box-shadow: var(--shadow-lift);
     margin-right: 14px;
     opacity: 0;
     padding: 10px;

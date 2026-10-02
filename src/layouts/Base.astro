@@ -105,6 +105,13 @@ const section = id.split('/')[0];
     <footer class:list={['site-footer', overFilm && 'site-footer--over-film']}>
       <div class="wrap">
         <p>© {new Date().getFullYear()} {siteName(lang)}</p>
+        <nav aria-label={lang === 'zh' ? '页脚导航' : 'Footer'}>
+          <ul>
+            {NAV_IDS.map((n) => (
+              <li><a href={routeFor(n, lang)}>{navLabel(lang, n)}</a></li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </footer>
   </body>

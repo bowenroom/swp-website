@@ -174,6 +174,10 @@ a {
   color: var(--dark-warm);
   font-size: var(--fs-lede);
   font-weight: 500;
+  /* Vertical padding so the target clears 24px: the label itself sets to
+   * ~23px, one pixel under the AA target-size floor, and this is wayfinding
+   * that has to work with a thumb as well as a pointer. */
+  padding: 4px 0;
   text-decoration: none;
 }
 
@@ -306,4 +310,179 @@ h1 {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* ══ borrowed structure, own palette ══════════════════════════════════
+ * The three additions below come from studying another site's build quality,
+ * not its look: a pill button pair with a real hierarchy, monospace reserved
+ * for identifiers, and elevation that reads as paper lifting off paper. None
+ * of them introduces a colour, a face or a shape the palette does not already
+ * own — --brand, --ivory, --border and the serif carry all three. */
+
+:root {
+  /* Identifiers only: DOIs, arXiv numbers, file paths, code. Never prose —
+   * a serif site that sets body copy in mono is wearing the face as a costume. */
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+  /* Elevation with an offset and a soft spread, not a zero-offset halo: the
+   * top layer is a tight contact shadow, the lower one is the ambient one. */
+  --shadow-soft: 0 1px 2px rgba(20, 20, 19, 0.05), 0 16px 36px -18px rgba(27, 54, 93, 0.35);
+  --shadow-lift: 0 2px 4px rgba(20, 20, 19, 0.06), 0 24px 48px -20px rgba(27, 54, 93, 0.4);
+  --radius: 10px;
+}
+
+.mono {
+  font-family: var(--mono);
+  /* Undo the CJK body tracking: a monospaced identifier is measured by its
+   * own advance width, and 0.4px per glyph reflows the number. */
+  letter-spacing: 0;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ── browser surfaces ────────────────────────────────────────
+ * The parts nobody styles still read as someone else's browser: selection,
+ * caret, focus ring, scrollbar. Theming them is the cheapest evidence that a
+ * page was designed rather than assembled. */
+::selection {
+  background: var(--tag-bg);
+  color: var(--near-black);
+}
+
+body {
+  caret-color: var(--brand);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+html {
+  scrollbar-color: #c9c6b8 var(--parchment);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--parchment);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbc8ba;
+  border: 2px solid var(--parchment);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stone);
+}
+
+/* ── graph-paper ground ───────────────────────────────────────
+ * --grid-line exists for exactly this (see its definition): ground-level
+ * texture a step fainter than any divider. At 32px on the cream it reads as
+ * the paper an academic site is written on, and it disappears behind the
+ * homepage's film, so the one page with its own ground is untouched. */
+body {
+  background-color: var(--parchment);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ── buttons ─────────────────────────────────────────────────
+ * Two steps and no more: the primary carries the one action a page wants,
+ * the secondary carries everything else. The pill is the shape the film's own
+ * CTAs already use, so a reader meets the same affordance on the homepage and
+ * on the papers page. Icons are drawn, never typed — an arrow in a box says
+ * "opens somewhere else" in a way no glyph does. */
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  gap: 8px;
+  /* 44px, the touch floor. The text only needs 35px of it; the extra is the
+   * target, and a primary action that is hard to hit on a phone is a broken
+   * action. `align-items: center` keeps the label optically where it was. */
+  line-height: 1.3;
+  min-height: 44px;
+  padding: 9px 18px;
+  text-decoration: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.btn svg {
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.btn--primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-soft);
+  color: var(--ivory);
+}
+
+.btn--primary:hover {
+  background: #16294a;
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+.btn--secondary {
+  background: color-mix(in srgb, var(--ivory) 80%, transparent);
+  border-color: var(--border);
+  color: var(--brand);
+}
+
+.btn--secondary:hover {
+  background: var(--brand-tint);
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* ── footer navigation ────────────────────────────────────────
+ * The footer was a copyright line and nothing else; a site with five sections
+ * should be able to reach them from its last screen. Hairline-separated text
+ * links, not pills — the pills are spent on actions, and these are places. */
+.site-footer nav {
+  margin-top: 10px;
+}
+
+.site-footer nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-footer nav a {
+  color: var(--charcoal);
+  display: inline-block;
+  font-size: var(--fs-meta);
+  /* Same target-size floor as the masthead: 19px of label plus 12px of
+   * padding lands every link over 24px without changing the row's rhythm. */
+  padding: 6px 0;
+}
+
+.site-footer nav a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

@@ -60,12 +60,43 @@
 }
 
 /* ── heading block ───────────────────────────────────────── */
+/* The title is the hook of the record, so it takes the h2 step rather than
+ * the h3 one — one rung below the page heading, one above the byline. */
 .paper-title {
-  font-size: var(--fs-h3);
+  font-size: var(--fs-h2);
   font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.4;
+  line-height: 1.35;
   margin: 0 0 10px;
+}
+
+/* The title IS the link (it opens the paper), so the whole line is one target
+ * and the mark is drawn inline rather than left to a bracketed label at the
+ * bottom of the card. The mark sits on the last line, not out in the margin,
+ * so a three-line Chinese title does not leave it stranded. */
+.paper-title-link {
+  color: var(--near-black);
+  text-decoration: none;
+}
+
+.paper-title-link:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.paper-external {
+  height: 0.72em;
+  opacity: 0.55;
+  transform: translateY(-0.12em);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  width: 0.72em;
+}
+
+.paper-title-link:hover .paper-external {
+  opacity: 1;
+  transform: translate(0.1em, -0.22em);
 }
 
 .paper-authors {
@@ -73,7 +104,9 @@
   font-family: var(--latin);
   font-size: var(--fs-meta);
   line-height: 1.6;
-  margin: 0 0 6px;
+  /* Was 6px — enough for the two to read as one block. The byline and the
+   * impact badges are different facts, so they get 14px of separation. */
+  margin: 0 0 14px;
 }
 
 /* The lead author is set darker and one step heavier than the co-authors, so
@@ -98,18 +131,44 @@
   color: var(--stone);
 }
 
-/* Venue, volume and date on one line: the citation facts a reader checks
- * first, kept together so they are never split across a wrap. */
-.paper-venue {
+/* ── meta row: venue pill + citation line ──────────────────────
+ * The venue is the one fact that lets three records be compared without
+ * reading them, so it is lifted out of the sentence and given a pill; volume
+ * and date stay a quiet line beside it. The pill is tinted, not filled — the
+ * solid ink-blue is reserved for the impact badges below, and two filled
+ * treatments in one record would spend the accent twice. */
+.paper-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  /* The pill is a small dense shape and the title is a large airy one; they
+   * need more air between them than two text lines do, or the pill reads as
+   * the title's label instead of as the record's category. */
+  margin: 0 0 16px;
+}
+
+.paper-venue-pill {
+  background: var(--brand-tint);
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, transparent);
+  border-radius: 999px;
+  color: var(--brand);
+  font-family: var(--latin);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  padding: 3px 12px;
+}
+
+.paper-venue-pill em {
+  font-style: italic;
+}
+
+.paper-status {
   color: var(--stone);
   font-family: var(--latin);
   font-size: var(--fs-meta);
+  font-variant-numeric: lining-nums tabular-nums;
   line-height: 1.55;
-  margin: 0 0 14px;
-}
-
-.paper-venue em {
-  font-style: italic;
 }
 
 .paper-venue-sep {
@@ -178,6 +237,7 @@
 .paper-figure img {
   background: var(--ivory);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
   display: block;
   height: auto;
   padding: 8px;
@@ -191,24 +251,42 @@
   margin-top: 8px;
 }
 
-/* ── links ───────────────────────────────────────────────── */
+/* ── footer row: action, then identifier ──────────────────────
+ * The two things at the end of a record are not the same kind of thing, so
+ * they do not get the same treatment: the action is a filled pill with an
+ * elevation of its own (it is the thing to press), the identifier is a quiet
+ * monospace link (it is the thing to copy). Both are data the reader came for,
+ * and neither is hidden behind a [bracket]. */
 .paper-links {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 12px 18px;
   margin: 0;
 }
 
-.paper-link {
-  border-bottom: 1px solid var(--tag-bg);
-  font-family: var(--latin);
+.paper-doi {
+  border-bottom: 1px solid var(--border);
+  color: var(--charcoal);
+  display: inline-block;
   font-size: var(--fs-meta);
   line-height: 1.5;
-  padding-bottom: 1px;
+  /* 19px of label + 5/3px of padding puts the identifier over the 24px
+   * target floor while keeping its rule close to the text. */
+  padding: 5px 0 3px;
+  transition: border-color 0.18s ease, color 0.18s ease;
 }
 
-.paper-link:hover {
+.paper-doi:hover {
   border-bottom-color: var(--brand);
+  color: var(--brand);
+}
+
+.paper-doi-label {
+  color: var(--stone);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  margin-right: 7px;
 }
 
 /* ── narrow ──────────────────────────────────────────────── */

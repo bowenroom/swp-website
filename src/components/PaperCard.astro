@@ -6,6 +6,14 @@
 // into grey metadata (CONTEXT.md, 期刊分区标注). Q1 and 中科院一区 TOP assert a
 // lead result and get the solid ink-blue badge; IF and the remaining 分区
 // labels are measurements and get the hairline badge.
+//
+// The record order is venue → title → byline → impact → abstract → figure →
+// links: the facts a reader scans in that order, with the venue lifted into a
+// pill so three papers can be compared at a glance without reading a line.
+// The title is the link (with a drawn external-link mark, because it opens
+// somewhere else), and the footer row separates the ACTION from the IDENTIFIER
+// — a pill for the first, monospace for the second, since one is a button and
+// the other is data.
 import { isLead } from '../content/papers.js';
 
 const { paper, lang } = Astro.props;
@@ -48,10 +56,39 @@ const formatDate = (date) =>
     month: 'long',
     timeZone: 'UTC',
   }).format(new Date(date + 'T00:00:00Z'));
+
+// The DOI as an identifier, not as a URL: the reader copies the number, and
+// the number is what belongs on the page. The href keeps the full resolver.
+const doiId = paper.doi.replace(/^https?:\/\/doi\.org\//, '');
 ---
 
 <article class="paper">
-  <h2 class="paper-title">{paper.title}</h2>
+  <p class="paper-meta">
+    <span class="paper-venue-pill"><em>{paper.venue}</em></span>
+    <span class="paper-status">
+      {paper.volume}
+      <span class="paper-venue-sep" aria-hidden="true">·</span>
+      <time class="paper-date" datetime={paper.date}>{formatDate(paper.date)}</time>
+    </span>
+  </p>
+
+  <h2 class="paper-title">
+    <a class="paper-title-link" href={paper.paperHref} rel="noopener" target="_blank">
+      {paper.title}
+      <svg class="paper-external" viewBox="0 0 16 16" aria-hidden="true">
+        <path
+          d="M6.4 3.2h6.4v6.4 M12.8 3.2 4 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+      </svg>
+      <span class="visually-hidden">
+        {isZh ? '（在新标签页打开论文）' : '(opens the paper in a new tab)'}
+      </span>
+    </a>
+  </h2>
 
   <p class="paper-authors">
     {paper.authors.map((name, i) => (
@@ -68,12 +105,6 @@ const formatDate = (date) =>
         </span>
       </>
     ))}
-  </p>
-
-  <p class="paper-venue">
-    <em>{paper.venue}</em>, {paper.volume}
-    <span class="paper-venue-sep">·</span>
-    <time class="paper-date" datetime={paper.date}>{formatDate(paper.date)}</time>
   </p>
 
   <div class="paper-badges">
@@ -94,9 +125,22 @@ const formatDate = (date) =>
   </figure>
 
   <p class="paper-links">
-    <a class="paper-link" href={paper.paperHref} rel="noopener" target="_blank">
-      [{isZh ? '论文' : 'Paper'}]
+    <a class="btn btn--primary" href={paper.paperHref} rel="noopener" target="_blank">
+      {isZh ? '阅读论文' : 'Read the paper'}
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path
+          d="M6.4 3.2h6.4v6.4 M12.8 3.2 4 12"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+      </svg>
+      <span class="visually-hidden">{isZh ? '（在新标签页打开）' : '(opens in a new tab)'}</span>
     </a>
-    <a class="paper-link" href={paper.doi} rel="noopener" target="_blank">[DOI]</a>
+    <a class="paper-doi mono" href={paper.doi} rel="noopener" target="_blank">
+      <span class="paper-doi-label">DOI</span>
+      {doiId}
+    </a>
   </p>
 </article>

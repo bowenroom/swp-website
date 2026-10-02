@@ -674,8 +674,22 @@ function mountScrollWorld(container, config) {
       // at 0 until the pre-roll strip is spent, then opens on the usual curve
       // measured from the handover -- which is the moment the dock has left.
       if (i === 0) {
-        const gate = seg.pre ? smooth((y - seg.start) / (seg.pre * vh)) : 1;
-        cop = after ? 0 : Math.min(gate, smooth(1 - pr / 0.62));
+        // The gate spans the PRE-ROLL STRIP — cstart (document start) to
+        // seg.start (the handover) — so it is fully open AT the handover,
+        // where the usual curve takes over.
+        //
+        // It used to run for `seg.pre * vh` AFTER the handover instead, i.e.
+        // 765px of ramp starting exactly where the fade-out curve starts
+        // falling: gate ≈ 0.1 while the curve ≈ 0.9, and the product of the
+        // two peaked at 0.107 in the DOM. The section's copy — kicker, title
+        // and body — was measurably never on screen, which is also why a card
+        // parked in that column looked like it was sitting on top of it. The
+        // curve itself now runs on the segment BODY (seg.start → seg.end) with
+        // the same 0.5-centred shape every middle section uses, so copy 01
+        // reads exactly like the four behind it.
+        const gate = seg.pre ? clamp((y - cstart) / (seg.pre * vh), 0, 1) : 1;
+        const body = clamp((y - seg.start) / (seg.end - seg.start), 0, 1);
+        cop = after ? 0 : Math.min(gate, smooth(1 - Math.abs(body - 0.5) / 0.5));
       }
       else if (i === N - 1) cop = before ? 0 : smooth(pr / 0.4);       // holds CTA at the end
       else cop = (before || after) ? 0 : smooth(1 - Math.abs(pr - 0.5) / 0.5);
@@ -926,6 +940,10 @@ function injectCSS() {
   .sw-copy__num{font-family:ui-monospace,Menlo,monospace;font-size:.74rem;letter-spacing:.12em;color:var(--sw-ink-soft);}
   .sw-copy__eyebrow{display:block;margin-top:18px;font-family:var(--sw-font-display);font-weight:700;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--sw-accent);}
   .sw-copy__title{font-family:var(--sw-font-display);font-weight:700;color:var(--sw-ink);font-size:clamp(2rem,4.4vw,3.5rem);line-height:1.03;margin:12px 0 0;letter-spacing:-.01em;text-shadow:0 2px 20px color-mix(in srgb,var(--sw-bg) 70%,transparent);}
+  /* Nine glyphs at 56px in a 460px column wraps 8+1, which drops the final
+   * character onto a line of its own (先看清楚，再谈判 / 断). Balance splits it
+   * evenly instead; the short titles that fit on one line are unaffected. */
+  .sw-copy__title{text-wrap:balance;}
   .sw-copy__body{margin-top:18px;font-size:clamp(1rem,1.25vw,1.14rem);line-height:1.55;color:color-mix(in srgb,var(--sw-ink) 78%,var(--sw-ink-soft));max-width:40ch;text-shadow:0 1px 12px color-mix(in srgb,var(--sw-bg) 90%,transparent);}
   .sw-copy__tags{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;}
   .sw-copy__tags li{font-size:.82rem;font-weight:600;color:color-mix(in srgb,var(--sw-accent) 70%,#000);padding:7px 14px;border-radius:999px;background:color-mix(in srgb,var(--sw-accent) 14%,#fff);border:1px solid color-mix(in srgb,var(--sw-accent) 30%,transparent);}

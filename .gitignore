@@ -11,8 +11,20 @@
 # OS noise
 .DS_Store
 
-# Astro build output + dependencies
-node_modules/
+# Astro build output + dependencies.
+# `node_modules` is a SYMLINK on this machine, not a directory: the repo lives on
+# an SMB share where npm cannot install (see scripts/fix-node-modules.sh), so the
+# real dependency tree lives on local disk and is linked in. A trailing-slash
+# pattern only matches directories and would NOT ignore a symlink, hence the
+# explicit name below as well.
+node_modules
 dist/
 .astro/
 npm-debug.log*
+
+# Local copies of the built site (95MB each) — build artifacts, not source.
+.swp-dist/
+
+# Superseded hero-flow video sources kept on disk for reference only.
+archive/hero-v1-flow/compressed-backup/
+archive/hero-v1-flow/concat-original/

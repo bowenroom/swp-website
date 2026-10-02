@@ -216,6 +216,39 @@ main {
   padding: 48px 0 96px;
 }
 
+/* A full-bleed section: the homepage's news dock is a three-column composition
+ * (rail + node + research tree) whose geometry only works at roughly 1180px.
+ * Inside --measure (720px) the grid collapses to a sliver and the reference
+ * layout is unreproducible, so this one section is allowed to escape the text
+ * measure while the prose pages keep it. `width:100vw` + a negative margin is
+ * the standard escape hatch; the scrollbar compensation keeps it from
+ * introducing a horizontal scrollbar on Windows/Linux. */
+main > .full-bleed {
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  max-width: none;
+  width: 100vw;
+}
+
+@supports (width: 100dvw) {
+  main > .full-bleed {
+    margin-left: calc(50% - 50dvw);
+    margin-right: calc(50% - 50dvw);
+    width: 100dvw;
+  }
+}
+
+@media (min-width: 1441px) {
+  /* A vertical scrollbar is ~15px narrower than the viewport on desktop, so a
+   * 100vw section would overhang by exactly that much and add a horizontal
+   * scrollbar. Giving the scrollbar its width back keeps the edges flush. */
+  main > .full-bleed {
+    margin-left: calc(50% - 50vw + 9px);
+    margin-right: calc(50% - 50vw + 9px);
+    width: calc(100vw - 18px);
+  }
+}
+
 h1 {
   font-size: var(--fs-h1);
   font-weight: 500;

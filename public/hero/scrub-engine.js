@@ -84,6 +84,14 @@ function mountScrollWorld(container, config) {
   const DIVE_W = config.diveScroll || 1.3;
   const CONN_W = config.connScroll || 0.9;
   const CROSSFADE = (config.crossfade != null) ? config.crossfade : 0.12;  // seam dissolve width (vh)
+  // Pre-roll, for a page that opens with a layer of its own floating OVER the
+  // film (the homepage news dock). Such a page puts that layer in the document
+  // flow ABOVE this container, which pushes the whole runway -- and therefore
+  // the first frame of video -- a full screen down the document. `preRoll` is
+  // how much of the FIRST clip plays behind that floating layer before the
+  // first dive takes over. Only the first segment carries it, and it is 0 unless
+  // the page asks for it, so a page without an overlay is bit-for-bit unchanged.
+  const PRE_ROLL = (config.preRoll != null) ? config.preRoll : 0;
   const N = SECTIONS.length;
   if (!N) return;
 
@@ -94,7 +102,11 @@ function mountScrollWorld(container, config) {
   const SEGMENTS = [];
   SECTIONS.forEach((s, i) => {
     const dive = { kind: 'dive', si: i, clip: s.clip, clipM: s.clipMobile, still: s.still, stillM: s.stillMobile,
-                   accent: s.accent, w: s.scroll || DIVE_W, linger: s.linger || 0 };
+                   accent: s.accent, w: s.scroll || DIVE_W, linger: s.linger || 0,
+                   // Only the first dive carries the pre-roll, and only when the
+                   // page asked for one (see PRE_ROLL). A connector is a fly-over
+                   // BETWEEN two dives, so it never pre-rolls.
+                   pre: (i === 0) ? PRE_ROLL : 0 };
     SEGMENTS.push(dive);
     s._seg = dive;
     // A connector is optional: if connectors[i] is falsy, the two dives simply
@@ -122,14 +134,47 @@ function mountScrollWorld(container, config) {
   const topbar = el('div', 'sw-topbar');
   if (config.brand) {
     const brand = el('a', 'sw-brand'); brand.href = (config.brand.href || '#');
-    brand.appendChild(el('span', 'sw-brand__mark'));
+    // The mark is optional and takes an image when the page supplies one; a
+    // page with no mark still renders the wordmark alone.
+    if (config.brand.mark) {
+      const mk = el('img', 'sw-brand__mark'); mk.src = config.brand.mark; mk.alt = '';
+      mk.decoding = 'async'; brand.appendChild(mk);
+    } else {
+      brand.appendChild(el('span', 'sw-brand__mark'));
+    }
     const nm = el('span', 'sw-brand__name'); nm.textContent = config.brand.name || ''; brand.appendChild(nm);
+    // The lab / group name sits after the person's name rather than replacing
+    // it: the wordmark reads "person + group", and a separator keeps the two
+    // from setting as one run of text.
+    if (config.brand.suffix) {
+      const sx = el('span', 'sw-brand__suffix'); sx.textContent = config.brand.suffix;
+      brand.appendChild(sx);
+    }
     topbar.appendChild(brand);
   }
   const nav = el('nav', 'sw-nav'); if (config.nav !== false) topbar.appendChild(nav);
   if (config.cta && config.cta.label) {
     const c = el('a', 'sw-topcta'); c.href = config.cta.href || '#'; c.textContent = config.cta.label;
     topbar.appendChild(c);
+  }
+  // Affiliations sit on the trailing edge of the topbar, opposite the
+  // wordmark. They are a static list, so it renders after the nav and CTA have
+  // had their chance at that slot and simply becomes the last flex child.
+  const affs = config.brand && config.brand.affiliations;
+  if (affs && affs.length) {
+    const box = el('div', 'sw-affil');
+    affs.forEach((a) => {
+      const item = el('span', 'sw-affil__item');
+      if (a.logo) {
+        const lg = el('img', 'sw-affil__logo'); lg.src = a.logo; lg.alt = a.name || '';
+        lg.decoding = 'async'; item.appendChild(lg);
+      }
+      if (a.name) {
+        const tx = el('span', 'sw-affil__name'); tx.textContent = a.name; item.appendChild(tx);
+      }
+      box.appendChild(item);
+    });
+    topbar.appendChild(box);
   }
 
   const stage = el('div', 'sw-stage');
@@ -185,16 +230,56 @@ function mountScrollWorld(container, config) {
   // mid-scene pause. f(0)=0, f(1)=1 always, so seam frames are untouched.
   const lingerEase = (x, L) => { L = clamp(L); const c = x - 0.5; return (1 - L) * x + L * (4 * c * c * c + 0.5); };
   let vh = window.innerHeight, stageX = 0, totalW = 0, activeIndex = -1, ticking = false;
+  // Where the runway BEGINS in document coordinates. The film is a fixed layer,
+  // but its segments are positioned off `scrollY`, and `scrollY` is measured
+  // from the top of the DOCUMENT, not from the top of the film. When the film
+  // is the first thing on the page that difference is zero and nothing is
+  // needed; when a section is placed before it (the homepage puts the news
+  // dock first), the film's own y is negative for every reader who is looking
+  // at the section above it, so segment 0 renders at full opacity ON TOP of it.
+  // Measuring the container once per layout keeps every consumer -- segment
+  // geometry, jumpTo, the progress bar, the retire test -- in document space.
+  let originY = 0;
+  let retired = false;
+  let held = false;
   let laidOutW = window.innerWidth;   // width the current layout was computed at (see onResize)
 
   function layout() {
     vh = window.innerHeight;
     laidOutW = window.innerWidth;
     stageX = window.innerWidth > 860 ? 4 : 0;
+    // getBoundingClientRect().top is viewport-relative, so adding the current
+    // scrollY recovers the absolute document offset. The track already carries
+    // the full runway height, so the container's own top IS the film origin.
+    // A mount target that cannot report a box (a detached node, a stub, a
+    // non-element) is treated as sitting at the document top rather than
+    // throwing: the film's geometry then matches the old document-space
+    // assumption, which is the safe direction to fail in.
+    const box = typeof container.getBoundingClientRect === 'function'
+      ? container.getBoundingClientRect()
+      : null;
+    originY = box ? Math.max(0, Math.round(box.top + (window.scrollY || window.pageYOffset))) : 0;
+    // A pre-roll is scroll the reader spends with the page's own opening layer
+    // still on top, watching clip 0 play behind it. It is a strip of runway in
+    // its own right, placed BEFORE the first segment rather than inside it: if
+    // it overlapped segment 0, the first dive would start at 28% of its own
+    // timeline and its opening frames would be unreachable. `off` therefore
+    // begins at PRE_ROLL, and the whole runway is pulled up to the top of the
+    // document -- which is the point, since the layer that floats over the film
+    // is what pushed the container's own originY a screen down the page.
+    const preY = PRE_ROLL > 0 ? 0 : originY;
     let off = 0;
-    SEGMENTS.forEach(s => { s.start = off * vh; off += s.w; s.end = off * vh; });
+    SEGMENTS.forEach(s => {
+      // `off` is the runway already laid down, and `s.pre` is this segment's own
+      // pre-roll: a strip in front of it that scrolls clip 0 from its first frame.
+      s.start = preY + (off + s.pre) * vh;
+      off += s.w;
+      s.end = preY + off * vh;
+    });
     totalW = off;
-    track.style.height = (totalW * vh + vh) + 'px';   // +1vh so the last flight completes
+    // The track reserves the pre-roll strip too, otherwise the page is shorter
+    // than the runway and the last dive can never complete.
+    track.style.height = (totalW * vh + vh + (PRE_ROLL > 0 ? PRE_ROLL * vh : 0)) + 'px';
     clampCopyParallax();
     read();
   }
@@ -243,6 +328,13 @@ function mountScrollWorld(container, config) {
   // its predecessor was still on screen, so three files competed for the same link.
   const ARM_VH = 3.0;
   const NEAR_VH = 0.8;
+  // When a segment pre-rolls, it is on screen BEFORE its own start, so every
+  // window keyed on `s.start` would sit a whole pre-roll too late: the clip
+  // would not be armed until the first dive was already meant to be over. Both
+  // ladders therefore measure from the same `visStart` the opacity pass uses.
+  // For a segment with no pre-roll this is exactly `s.start`, so nothing else
+  // on the page moves.
+  const visStartOf = (s) => (s.pre ? s.start - s.pre * vh : s.start);
 
   // Serve the lighter mobile encode on phones when one was provided.
   const clipUrl = (s) => (isMobile() && s.clipM) ? s.clipM : s.clip;
@@ -284,8 +376,14 @@ function mountScrollWorld(container, config) {
   // the dive they were still looking at on a still. Containment is the only rank
   // that matches what the reader sees.
   function claimStrength(s, y) {
-    const mid = (s.start + s.end) / 2;
-    if (y >= s.start && y < s.end) return 0;                 // the scene on screen
+    // Measured over the segment's VISIBLE span, so a pre-rolling clip is treated
+    // as "the scene on screen" during its pre-roll rather than as a scene still
+    // a pre-roll away -- otherwise the clip actually being watched would be
+    // ranked behind its neighbour and could lose the <video> element at the very
+    // moment it starts playing.
+    const vs = visStartOf(s);
+    const mid = (vs + s.end) / 2;
+    if (y >= vs && y < s.end) return 0;                       // the scene on screen
     if (s.visible) return CLAIM_FADE + Math.abs(y - mid);      // fading in or out
     return CLAIM_FAR + Math.abs(y - mid);
   }
@@ -383,7 +481,11 @@ function mountScrollWorld(container, config) {
       rec.revealed = true;
       const o = rec.owner; if (o) o.el.classList.add('has-clip');
     }, { once: true });
-    v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} if (userReady) primeVideo(v); });
+    v.addEventListener('loadeddata', () => { try { v.pause(); } catch (e) {} if (userReady) primeVideo(v); rec.revealed = true; const o = rec.owner; if (o) o.el.classList.add('has-clip'); });
+    // If the video has already loaded (readyState >= 2) by the time the listener
+    // is attached, the event has already fired and will never fire again.
+    // Manually invoke the reveal logic so the video is shown immediately.
+    if (v.readyState >= 2) { try { v.pause(); } catch (e) {} rec.revealed = true; s.el.classList.add('has-clip'); console.log('[SW DEBUG] readyState >= 2, added has-clip to', s.el.className); } else { console.log('[SW DEBUG] readyState < 2:', v.readyState, 'src:', url); }
     // A clip that failed must not be left in the DOM. The old handler only cleared
     // s.loading, so the very next scroll frame rebuilt a <video> for the same
     // failing URL: one element and one request per frame, unbounded, all competing
@@ -448,6 +550,12 @@ function mountScrollWorld(container, config) {
   function read() {
     const y = window.scrollY || window.pageYOffset;
     const fade = CROSSFADE * vh;
+    // Where the runway actually begins, in document space. Normally that is the
+    // first segment's start, but a pre-rolling segment starts playing a strip of
+    // scroll earlier than that, so the film is already owed the reader at the top
+    // of the runway. Computed once here because the progress bar, the pending
+    // test and the retire test all need the same answer.
+    const runwayStart = SEGMENTS[0].start - (SEGMENTS[0].pre || 0) * vh;
     let ci = 0;
     for (let i = 0; i < NSEG; i++) if (y >= SEGMENTS[i].start) ci = i;
 
@@ -457,10 +565,20 @@ function mountScrollWorld(container, config) {
     // the dive on screen lose its element to the connector ahead of it.
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
-      const local = clamp((y - s.start) / (s.end - s.start), 0, 1);
+      // A pre-rolling segment is visible from the moment the film starts, and
+      // its local time is measured across the pre-roll strip PLUS its own body,
+      // so the clip plays through both without a jump at the handover. Every
+      // other segment is timed across its own body exactly as before.
+      const local = s.pre
+        ? clamp((y - (s.start - s.pre * vh)) / (s.end - (s.start - s.pre * vh)), 0, 1)
+        : clamp((y - s.start) / (s.end - s.start), 0, 1);
       s.target = s.linger ? lingerEase(local, s.linger) : local;
       let outside = 0;
-      if (y < s.start) outside = s.start - y; else if (y > s.end) outside = y - s.end;
+      // Visibility opens at the START OF THE PRE-ROLL, not at s.start, or the
+      // first clip would stay invisible for exactly the stretch it is supposed
+      // to be playing behind the page's opening layer.
+      const visStart = visStartOf(s);
+      if (y < visStart) outside = visStart - y; else if (y > s.end) outside = y - s.end;
       const op = smooth(1 - outside / fade);
       s.el.style.opacity = op; s.visible = op > 0.001;
       s.el.style.zIndex = (i === ci) ? '120' : String(100 + Math.round(op * 10));
@@ -481,7 +599,7 @@ function mountScrollWorld(container, config) {
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
       if (!s.clip || s.failed) continue;
-      if (y > s.start - ARM_VH * vh && y < s.end + NEAR_VH * vh) cands.push(s);
+      if (y > visStartOf(s) - ARM_VH * vh && y < s.end + NEAR_VH * vh) cands.push(s);
     }
     cands.sort((a, b) => claimStrength(a, y) - claimStrength(b, y));
     // URLs close enough to be worth full buffering this frame. Collected across the
@@ -508,7 +626,7 @@ function mountScrollWorld(container, config) {
       // state has to follow the scene that is on screen. Keying this off the holder
       // instead let the outgoing dive's element be demoted while the connector was
       // fading in over it, stalling the one scene the reader was actually watching.
-      if (y >= s.start && y < s.end + NEAR_VH * vh) buffering.add(clipUrl(s));
+      if (y >= visStartOf(s) && y < s.end + NEAR_VH * vh) buffering.add(clipUrl(s));
     }
     for (let i = 0; i < NSEG; i++) {
       const s = SEGMENTS[i];
@@ -518,10 +636,24 @@ function mountScrollWorld(container, config) {
 
     for (let i = 0; i < N; i++) {
       const seg = SECTIONS[i]._seg;
-      const pr = clamp((y - seg.start) / (seg.end - seg.start), 0, 1);
-      const before = y < seg.start, after = y > seg.end;
+      // Copy is timed on the same VISIBLE span as the scene, not on `seg.start`.
+      // A pre-rolling first scene therefore has its text fade in with the video
+      // instead of popping in one pre-roll later. The opening page layer is
+      // floating over that strip, so the first scene's copy is additionally held
+      // back until the pre-roll is most of the way through (see the gate below).
+      const cstart = visStartOf(seg);
+      const pr = clamp((y - cstart) / (seg.end - cstart), 0, 1);
+      const before = y < cstart, after = y > seg.end;
       let cop;
-      if (i === 0) cop = after ? 0 : smooth(1 - pr / 0.62);            // greets on landing
+      // Scene 0 normally greets the reader on landing. With a pre-roll it must
+      // NOT: the page's own opening layer is sitting on top of exactly that
+      // stretch, so text fading in here would collide with it. The copy is held
+      // at 0 until the pre-roll strip is spent, then opens on the usual curve
+      // measured from the handover -- which is the moment the dock has left.
+      if (i === 0) {
+        const gate = seg.pre ? smooth((y - seg.start) / (seg.pre * vh)) : 1;
+        cop = after ? 0 : Math.min(gate, smooth(1 - pr / 0.62));
+      }
       else if (i === N - 1) cop = before ? 0 : smooth(pr / 0.4);       // holds CTA at the end
       else cop = (before || after) ? 0 : smooth(1 - Math.abs(pr - 0.5) / 0.5);
       const c = copies[i];
@@ -549,9 +681,54 @@ function mountScrollWorld(container, config) {
       nav.querySelectorAll('.sw-nav__item').forEach((n, k) => n.classList.toggle('is-active', k === near));
       container.style.setProperty('--sw-accent', SECTIONS[near].accent || '');
     }
-    scrollbarFill.style.transform = `scaleX(${clamp(y / (totalW * vh))})`;
+    // Progress is measured across the runway the reader can actually scroll,
+    // which runs from the top of the film to the end of its last segment. With
+    // no pre-roll that is the original `y / (totalW * vh)`; with one, the film
+    // begins at the top of the document, so dividing by a quantity that still
+    // assumed the old origin would peg the bar at 1 long before the last scene.
+    const runwayLen = Math.max(1, SEGMENTS[NSEG - 1].end - (SEGMENTS[0].start - (SEGMENTS[0].pre || 0) * vh));
+    scrollbarFill.style.transform = `scaleX(${clamp((y - runwayStart) / runwayLen)})`;
     hint.style.opacity = clamp(1 - y / (0.5 * vh));
     if (particles) particles.style.transform = `translate3d(0, ${-y * 0.05}px, 0)`;
+
+    // ── retire the fixed layers once the runway is behind us ──────────────
+    // sky / stage / copy / route / hint / topbar are all `position: fixed` and
+    // sit at z-index 0-50. That is right WHILE the film plays -- a fixed stage
+    // is what makes a scrubbed dive feel like one continuous camera -- but it
+    // means every layer stays painted over whatever follows the film. The
+    // homepage puts a real content section after the hero, so without this the
+    // news dock rendered underneath a permanently-on fixed stage: visible only
+    // where the stage happened to be transparent, and never clickable.
+    //
+    // The runway ends at `totalW * vh`; past that the film is over and the page
+    // belongs to the document again. One class on the container does it, so the
+    // stylesheet owns the "what does an idle hero look like" answer and this
+    // file only owns WHEN.
+    // The runway ends at the LAST segment's end in document space. Reading it
+    // off the segment rather than recomputing `originY + totalW * vh` is what
+    // keeps this correct once a pre-roll has moved the start of the runway: the
+    // two agree only when the runway begins where the container does.
+    const past = y > SEGMENTS[NSEG - 1].end - vh * 0.25;
+    if (past !== retired) {
+      retired = past;
+      container.classList.toggle('is-retired', past);
+    }
+    // ...and it begins at `originY`. Above that line the reader is looking at
+    // whatever the page put before the film, so the film owes them nothing and
+    // must not paint. Between the origin and the first segment the runway is
+    // in view but no scene owns it yet; the sky fading in over the last few px
+    // of the section above reads as the page handing over, which is the seam
+    // you want rather than a hard pop at the origin.
+    // Pending means "the runway has not started yet, so the film owes the reader
+    // nothing". A pre-roll moves the runway's start to the very top of the
+    // document, so there is no stretch of page above it and the film is never
+    // pending -- which is exactly the point: the video is already playing on the
+    // first screen. Without a pre-roll the original meaning is kept untouched.
+    const pending = !past && (PRE_ROLL > 0 ? false : y < runwayStart + CROSSFADE * vh);
+    if (pending !== held) {
+      held = pending;
+      container.classList.toggle('is-pending', pending);
+    }
     ticking = false;
   }
 
@@ -687,6 +864,20 @@ function injectCSS() {
   .sw-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--sw-ink);}
   .sw-brand__mark{width:24px;height:28px;border-radius:7px 7px 10px 10px;background:linear-gradient(160deg,var(--sw-accent),color-mix(in srgb,var(--sw-accent) 60%,#000));box-shadow:0 6px 14px color-mix(in srgb,var(--sw-accent) 40%,transparent);}
   .sw-brand__name{font-family:var(--sw-font-display);font-weight:700;font-size:1.1rem;}
+  /* Scoped to the element TYPE on purpose. The single-class rule above styles
+     the span fallback (gradient tile, rounded square, shadow); this one styles
+     only a real image mark. Sharing the class without the type qualifier would
+     let background:none wipe the gradient for every page that passes no mark. */
+  img.sw-brand__mark{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:none;box-shadow:none;}
+  .sw-brand__suffix{font-family:var(--sw-font-body);font-weight:500;font-size:.82rem;color:var(--sw-ink-soft);letter-spacing:.06em;padding-left:10px;margin-left:2px;border-left:1px solid color-mix(in srgb,var(--sw-ink) 22%,transparent);}
+  /* Affiliations: logos carry the institutions, the text names them. The
+     hairline between items is the only separator -- no pills, no background
+     cards, because two small marks sitting on a busy film need to stay quiet. */
+  .sw-affil{display:flex;align-items:center;gap:14px;}
+  .sw-affil__item{display:flex;align-items:center;gap:7px;}
+  .sw-affil__item+.sw-affil__item{padding-left:14px;border-left:1px solid color-mix(in srgb,var(--sw-ink) 18%,transparent);}
+  .sw-affil__logo{width:26px;height:26px;object-fit:contain;flex:0 0 auto;}
+  .sw-affil__name{font-family:var(--sw-font-body);font-weight:500;font-size:.78rem;color:var(--sw-ink-soft);white-space:nowrap;}
   .sw-nav{display:flex;gap:4px;padding:5px;background:color-mix(in srgb,#fff 55%,transparent);backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--sw-accent) 16%,transparent);border-radius:999px;}
   .sw-nav__item{font:inherit;font-size:.82rem;color:var(--sw-ink-soft);border:0;background:transparent;cursor:pointer;padding:7px 14px;border-radius:999px;transition:color .25s,background .25s;}
   .sw-nav__item:hover{color:var(--sw-ink);} .sw-nav__item.is-active{color:#fff;background:var(--sw-accent);}
@@ -726,6 +917,13 @@ function injectCSS() {
   .sw-track{position:relative;z-index:1;width:100%;pointer-events:none;}
   @media (max-width:860px){
     .sw-nav{display:none;}
+    /* Below this width the wordmark, its lab suffix and two institutional
+       marks stop fitting on one row. Drop the affiliation TEXT first and keep
+       the logos: a visitor still recognises both universities from the marks,
+       which is the information the slot is there to carry. The names come back
+       at the next breakpoint rather than being dropped entirely. */
+    .sw-affil__name{display:none;}
+    .sw-affil{gap:10px;} .sw-affil__item+.sw-affil__item{padding-left:10px;}
     .sw-copylayer::before{width:100%;height:60%;top:auto;bottom:0;background:linear-gradient(0deg,var(--sw-bg) 8%,color-mix(in srgb,var(--sw-bg) 70%,transparent) 46%,transparent 100%);}
     /* Anchor copy to the bottom, clear of the home indicator / collapsing URL bar.
        dvh + env() are progressive: browsers that lack them keep the vh fallback line. */
@@ -747,7 +945,63 @@ function injectCSS() {
     .sw-route__dot{width:28px;height:28px;}
     .sw-btn{padding:15px 26px;}
   }
+  /* Below 1120px the desktop row runs out of room before the mobile breakpoint
+     takes over, so shed the affiliation names here -- above 860px, where they
+     would otherwise sit on the same line as a full-width nav. */
+  @media (max-width:1120px) and (min-width:861px){
+    .sw-affil__name{display:none;}
+  }
   @media (prefers-reduced-motion:reduce){ .sw-hint i::after{animation:none;} .sw-pt{display:none;} }
+
+  /* ── retired: the film is over, hand the page back ──────────────────────
+   * Every layer above is 'position: fixed', which is what makes the scrub read
+   * as one camera. The cost is that they keep painting over the rest of the
+   * document. Once the engine marks the container '.is-retired' (see read()),
+   * they stop: the stage, sky and copy go invisible, and the chrome that only
+   * makes sense during the film (route rail, scroll hint, topbar, progress
+   * bar) is hidden outright so it cannot sit on top of the content below.
+   *
+   * 'visibility' rather than 'display' on the painted layers, so the crossfade
+   * out is a fade rather than a pop. Pointer events go with it: an invisible
+   * fixed stage that still swallows clicks is the worst of both. */
+  .sw-root.is-retired .sw-sky,
+  .sw-root.is-retired .sw-stage,
+  .sw-root.is-retired .sw-copylayer,
+  .sw-root.is-retired .sw-track{ visibility:hidden; pointer-events:none; }
+  .sw-root.is-retired .sw-topbar,
+  .sw-root.is-retired .sw-route,
+  .sw-root.is-retired .sw-hint,
+  .sw-root.is-retired .sw-scrollbar{ display:none; }
+  .sw-root.is-retired{ pointer-events:none; }
+  /* ── pending: the film is BELOW the fold, so nothing of it may paint ────
+   * The mirror image of retirement. When the film is not the first thing on
+   * the page, a reader looking at the section above it is at scrollY 0, which
+   * is BEFORE the runway starts. Segment opacity alone cannot express that:
+   * the crossfade gives every segment a non-zero value just outside its own
+   * span, so segment 0 is faintly visible no matter how far away it is. The
+   * sky and the chrome are worse -- they are fixed, so they are on screen at
+   * the top of the document by definition.
+   *
+   * So the engine holds the whole film back until the reader is actually
+   * inside the runway: read() sets '.is-pending' while scrollY is above the
+   * origin but not yet inside the first segment, and the layers below yield.
+   * Same treatment as retirement, same reason: a fixed layer that is not the
+   * current content must not be painted over the current content. */
+  .sw-root.is-pending .sw-sky,
+  .sw-root.is-pending .sw-stage,
+  .sw-root.is-pending .sw-copylayer,
+  .sw-root.is-pending .sw-track{ visibility:hidden; pointer-events:none; }
+  .sw-root.is-pending .sw-topbar,
+  .sw-root.is-pending .sw-route,
+  .sw-root.is-pending .sw-hint,
+  .sw-root.is-pending .sw-scrollbar{ display:none; }
+  .sw-root.is-pending{ pointer-events:none; }
+  /* The runway KEEPS its height once retired. Collapsing it is tempting -- the
+   * track exists only to manufacture scroll distance -- but the reader is at
+   * the bottom of that distance when this fires, so removing ~6500px of height
+   * under their scroll position clamps scrollY and throws them back to the top
+   * of the page. The section that follows already sits immediately after the
+   * runway, so there is no empty gap to reclaim anyway. */
   `;
   // Wrap in a cascade layer so the page's own theme tokens (unlayered
   // :root / .sw-root { --sw-bg / --sw-ink / --sw-accent … }) always win over

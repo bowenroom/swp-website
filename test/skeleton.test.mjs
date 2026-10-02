@@ -110,9 +110,17 @@ if (home) {
 }
 
 console.log('\nrecent updates (bilingual)');
-// The homepage news block is the one place the two languages must stay in
-// lockstep: it is a single hand-maintained data file, so a drift between the
-// two rendered lists is a content bug, not a layout difference.
+// The homepage dock is the one place the two languages must stay in lockstep: it
+// is a single hand-maintained data file, so a drift between the two rendered
+// lists is a content bug, not a layout difference.
+//
+// These assertions were written against the first version of the block, which
+// was a plain list. The dock rebuild replaced its markup, so the seam moved with
+// it: the old `class="news"` wrapper and its `data-date` attributes are gone
+// and the entries now live inside a masked, script-looped rail. The CONTENT
+// contract is unchanged -- ten entries, newest first, honest partial dates,
+// no hotlinked images -- so the assertions below target the new markers instead
+// of being deleted. Losing them would silently allow a half-translated rail.
 for (const [route, lang, heading, sample] of [
   ['', 'zh', '近期动态', '很荣幸与林教授交流'],
   ['en', 'en', 'Recent updates', 'A great honor to meet Prof. Lin'],
@@ -123,12 +131,43 @@ for (const [route, lang, heading, sample] of [
     continue;
   }
 
-  check(`/${route}/ has news block`, page.includes('class="news"'));
+  check(`/${route}/ has the news dock`, page.includes('data-dock'));
+  check(`/${route}/ dock has the research panel`, page.includes('class="dock-tree"'));
+  // The dock was rebuilt as ONE compact card at the left edge with the research
+  // tree inside it, so the old centre-node and the full-width three-column
+  // arrangement are gone by design. What has to hold instead is that the film
+  // is never covered: the card is a bounded column, not a screen.
+  check(`/${route}/ dock has no leftover centre node`, !page.includes('class="dock-node"'));
+  check(`/${route}/ dock card is one bounded column`, page.includes('class="dock-card"'));
+  // The preview is the card's own affordance and must stay inside the dock so a
+  // second copy of the section can never share one another's state.
+  check(`/${route}/ dock owns its hover preview`, page.includes('data-dock-preview'));
+  // The rail only travels once the script has duplicated it; the shipped markup
+  // must therefore contain exactly ONE honest list, with the loop copy added
+  // client-side. Two static lists would read every story twice.
+  // Only the attribute counts: the hook string also appears twice inside the
+  // component's own inlined <script>, which is the script talking, not markup.
+  check(
+    `/${route}/ ships one news list for the loop to duplicate`,
+    [...page.matchAll(/<ul class="dock-list"(?=[\s>])/g)].length === 1
+  );
   check(`/${route}/ news heading is ${heading}`, page.includes(heading));
 
   // Ten entries, newest first. Read them back out of the rendered HTML rather
   // than the data file: this asserts what a visitor actually receives.
-  const items = [...page.matchAll(/data-date="([0-9-]+)"/g)].map((m) => m[1]);
+  // The date is rendered as text next to the label rather than carried on a
+  // data-date attribute, so it is read back out of the rendered markup the way a
+  // visitor receives it.
+  // Astro appends its own scope attribute to a class="dock-item__date" element,
+  // so the closing bracket cannot be anchored on. Matching the class and
+  // reading the text after it is what actually asserts what is rendered.
+  // The two languages separate year and month differently on purpose: zh
+  // renders `2024.06`, en renders `2024 · 06`. Capturing the digits only and
+  // rejoining them here means this assertion checks the DATE PRECISION the
+  // visitor is actually shown, not one language's punctuation.
+  const items = [...page.matchAll(
+    /class="dock-item__date"[^>]*>([0-9]{4})(?:\s*[.\u00b7]\s*([0-9]{2}))?\s*</g
+  )].map((m) => (m[2] ? `${m[1]}.${m[2]}` : m[1]));
   check(`/${route}/ renders 10 entries`, items.length === 10, `found ${items.length}`);
   check(
     `/${route}/ entries are newest first`,
@@ -139,15 +178,26 @@ for (const [route, lang, heading, sample] of [
 
   // A paper's date must not be the old site's blanket 2024.2.22 stamp: five
   // different papers across three journals cannot share one publication day.
-  const paperDates = [...page.matchAll(/data-kind="paper" data-date="([0-9-]+)"/g)].map(
-    (m) => m[1]
-  );
+  // This one walks the markup instead of matching it. The row's own label
+  // (`data-kind`) lives on the <li>, its date on a descendant <span>, and the
+  // inline SVG mark between them is long enough that any fixed character
+  // window is a guess that breaks the next time an icon path changes. Splitting
+  // on the row boundary and reading the date out of each segment asks the
+  // question directly: within the rows marked as papers, are the dates varied?
+  const paperDates = page
+    .split(/<li class="dock-row" data-kind="paper"/)
+    .slice(1)
+    .map((chunk) =>
+      /class="dock-item__date"[^>]*>([0-9]{4})(?:\s*[.\u00b7]\s*([0-9]{2}))?/.exec(chunk)
+    )
+    .filter(Boolean)
+    .map((m) => (m[2] ? `${m[1]}.${m[2]}` : m[1]));
   check(`/${route}/ paper dates are not all identical`, new Set(paperDates).size > 1,
     paperDates.join(' '));
 
   // Partial dates are honest: the source fixes a month or a year, and the
   // rendered datetime must not invent a day.
-  check(`/${route}/ keeps month-only precision`, items.includes('2022-11'));
+  check(`/${route}/ keeps month-only precision`, items.includes('2022.11'));
   check(`/${route}/ keeps year-only precision`, items.includes('2022'));
   check(`/${route}/ hotlinks no legacy image host`, !page.includes('loli.net'));
 }

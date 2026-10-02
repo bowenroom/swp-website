@@ -3,8 +3,8 @@
 //
 // Every bug this file guards was invisible in a screenshot and only showed up
 // on a slow cross-border link, which is exactly where the homepage has to work:
-//   - five scenes plus four connectors expand to NINE segments over only FOUR
-//     unique mp4s, so a <video> per segment meant two decoders on the same file;
+//   - a connector pointing at the outgoing dive's clip replayed that whole file
+//     a second time, so the reader watched each scene end and then start over;
 //   - a failing clip used to be rebuilt on the next scroll frame, i.e. one new
 //     element and one new request per frame, unbounded;
 //   - a re-parented clip could keep ready=false forever, so no seek was ever
@@ -178,7 +178,8 @@ if (typeof mountScrollWorld !== 'function') {
 // ---------------------------------------------------------- hero fixtures --
 
 // Mirrors src/components/Hero.astro: five scenes, the closing one clip-less, and
-// one connector per gap reusing the outgoing dive's clip.
+// one NULL connector per gap. No transitional clips exist for this film, so the
+// dives cross-dissolve straight into each other rather than replaying a file.
 const CLIPS = ['s1-approach', 's2-sensing', 's3-fusion', 's4-decision'];
 const clipUrl = (id) => (id ? `/hero/vid/${id}.mp4` : null);
 const stillUrl = (id) => `/hero/${id}.jpg`;
@@ -189,10 +190,11 @@ const sections = [
   { id: 'fusion', label: 'Fusion', title: 't', body: 'b', still: stillUrl('k3-fusion'), clip: clipUrl(CLIPS[3]), accent: '#6b5f8a' },
   { id: 'decision', label: 'Decision', title: 't', body: 'b', still: stillUrl('k4-decision'), clip: null, accent: '#a6604e' },
 ];
-const connectors = sections.slice(0, -1).map((s) => s.clip);
+const connectors = sections.slice(0, -1).map(() => null);
 
 const VH = 900;
-// 4 dives * 1.25vh + 4 connectors * 0.85vh + 1 final dive * 1.25vh = 9.65vh.
+// Every connector is null, so a gap contributes no segment at all:
+// five dives * 1.25vh = 6.25vh of runway.
 const SEG = (() => {
   const w = [];
   sections.forEach((s, i) => {
@@ -239,22 +241,27 @@ const scrollTo = (y) => {
   pump();
 };
 
-console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain');
+console.log('hero engine: no clip replay over the real 5-scene / 5-segment chain');
 
-// 1. The shape of the chain the homepage actually builds.
+// 1. The shape of the chain the homepage actually builds. Five scenes make five
+//    segments -- a null connector contributes none -- so no file can be shown by
+//    two segments. This is the regression guard for the replay artefact.
 {
   scrollTo(0);
   const p = probeOf(mount());
-  check('nine segments for five scenes', p.segments.length === 9, `got ${p.segments.length}`);
-  check('eight of nine segments carry a clip', p.segments.filter((s) => s.clip).length === 8);
-  check('the closing scene is still-only by design', p.segments[8].clip === null);
-  check('four unique files cover the eight clip segments',
+  check('five segments for five scenes', p.segments.length === 5, `got ${p.segments.length}`);
+  check('four of five segments carry a clip', p.segments.filter((s) => s.clip).length === 4);
+  check('the closing scene is still-only by design', p.segments[4].clip === null);
+  check('four unique files cover the four clip segments',
     new Set(p.segments.map((s) => s.clip).filter(Boolean)).size === 4);
-  check('each connector reuses its outgoing dive clip',
-    p.segments[1].clip === p.segments[0].clip &&
-    p.segments[3].clip === p.segments[2].clip &&
-    p.segments[5].clip === p.segments[4].clip &&
-    p.segments[7].clip === p.segments[6].clip);
+  check('NO file is played by two segments', (() => {
+    const seen = new Map();
+    for (const s of p.segments) {
+      if (!s.clip) continue;
+      seen.set(s.clip, (seen.get(s.clip) || 0) + 1);
+    }
+    return [...seen.values()].every((n) => n === 1);
+  })(), p.segments.map((s) => s.clip).join(' '));
 }
 
 // 2. One element and one src per unique file, no matter how many segments point
@@ -269,16 +276,28 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
     [...counts.entries()].filter(([, n]) => n > 1).map(([u, n]) => `${u} x${n}`).join(' '));
   check('each armed file was assigned src exactly once', vids.every((v) => v.srcAssignments === 1),
     vids.filter((v) => v.srcAssignments !== 1).map((v) => `${v._src} x${v.srcAssignments}`).join(' '));
-  check('the landing frame arms two clips, not all four', vids.length === 2,
+  // With the connectors gone the five dives are contiguous at 1.25vh each, so the
+  // 3vh arm window now reaches one segment further than it used to and three of
+  // the four files get a cheap metadata request on the landing frame. That is the
+  // intended cost of the fix and it is bounded: the LAST clip is still never
+  // touched, and 'arm' only means a metadata probe (see the preload ladder below,
+  // which is what actually spends bandwidth).
+  check('the landing frame does not arm the whole runway', vids.length < 4,
     `${vids.length}: ${vids.map((v) => v._src).join(' ')}`);
+  // Exactly one -- the one the reader is actually looking at -- buffers. The rest
+  // are metadata probes only.
+  check('only the on-screen clip buffers on landing; the rest stay metadata',
+    vids.filter((v) => v.preload === 'auto').length === 1 &&
+    vids[0].preload === 'auto',
+    vids.map((v) => `${v._src}:${v.preload}`).join(' '));
 }
 
 // 3. The preload ladder: arm cheaply at 3vh out, buffer fully at 0.8vh.
 {
-  // Mid-connector 0. Two files are in reach of the 0.8vh NEAR window here (the
-  // one on screen and the next dive just under the fold), and exactly one of them
-  // -- the one being watched -- may be 'auto'. Any further clip stays 'metadata'.
-  scrollTo(mid(1));
+  // Mid-first-dive. Two files are in reach of the 0.8vh NEAR window here (the one
+  // on screen and the next dive just under the fold), and exactly one of them --
+  // the one being watched -- may be 'auto'. Any further clip stays 'metadata'.
+  scrollTo(mid(0));
   const holders = heldBy(mount());
   const show = holders.map((s) => ({ i: s.i, visible: s.visible, promoted: s.promoted, pl: s.videoPreload }));
   const onScreen = holders.filter((s) => s.visible);
@@ -299,7 +318,7 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
   // files buffering, and never more than the two clips actually in reach.
   const host = mount();
   let worst = 0, worstAt = 0;
-  for (let y = 0; y <= 8800; y += 45) {
+  for (let y = 0; y <= 5900; y += 45) {
     scrollTo(y);
     const autos = new Set(videosIn(host).filter((v) => v.preload === 'auto').map((v) => v._src));
     if (autos.size > worst) { worst = autos.size; worstAt = y; }
@@ -370,7 +389,7 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
 
   // Sweep the whole runway the way a visitor scrolls, then look at every video
   // this mount built after the failure -- not just the ones currently mounted.
-  for (let y = 0; y <= 9000; y += 90) scrollTo(y);
+  for (let y = 0; y <= 6000; y += 90) scrollTo(y);
   const builtDuringSweep = videosSince(mark).filter((v) => v !== target);
   check('the broken file is never requested again',
     builtDuringSweep.every((v) => v._src !== broken),
@@ -382,9 +401,10 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
     videosIn(host).every((v) => v._src !== broken), videosIn(host).map((v) => v._src).join(' '));
 
   const p = probeOf(host);
-  check('both segments sharing the broken file degraded to their still',
+  check('the only segment using the broken file degraded to its still',
     p.segments.filter((s) => s.clip === broken).every((s) => s.failed) &&
-    p.segments.filter((s) => s.clip === broken).length === 2);
+    p.segments.filter((s) => s.clip === broken).length === 1,
+    JSON.stringify(p.segments.map((s, i) => ({ i, clip: s.clip, failed: s.failed }))));
   check('healthy clips keep working after the failure',
     p.segments.filter((s) => s.clip && s.clip !== broken).every((s) => !s.failed),
     JSON.stringify(p.segments.map((s, i) => ({ i, clip: s.clip, failed: s.failed }))));
@@ -393,6 +413,12 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
 }
 
 // 6. Ownership follows the scroll without thrashing.
+//
+//    With every connector null, each file belongs to exactly ONE segment, so the
+//    shared-element handover the engine was built for can no longer happen here.
+//    That is the point: a clip that is never re-parented is a clip that cannot be
+//    replayed. Assert the stronger invariant -- every element stays on its own
+//    scene for the whole runway, and no scene ever shows a foreign file.
 {
   scrollTo(0);
   const host = mount();
@@ -402,22 +428,29 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
 
   scrollTo(mid(1));
   const v1 = videosIn(host)[0];
-  check('the SAME element moved to the connector, not a fresh one', v1 === v0,
-    'element was rebuilt instead of moved');
-  check('it is parented to the connector scene', scenes[1].children.includes(v0));
-  check('the dive that gave it up is not left holding it', !scenes[0].children.includes(v0));
-  check('the dive that gave it up shows its still again', !scenes[0].classList.contains('has-clip'));
+  check('leaving dive 0 does NOT drag its element onto the next scene', !scenes[1].children.includes(v0),
+    'element was re-parented into a scene that does not own it');
+  check('the scene on screen holds its own clip', videosIn(host).some((v) =>
+    scenes[1].children.includes(v)), 'no element on the second dive');
+  check('a clip is never rebuilt after being handed out', v1 !== null && videosIn(host).every((v) =>
+    v.srcAssignments === 1), videosIn(host).map((v) => `${v._src} x${v.srcAssignments}`).join(' '));
 
   let flips = 0;
   let prev = videosIn(host)[0];
   for (let i = 0; i < 20; i++) { pump(1); const now = videosIn(host)[0]; if (now !== prev) flips++; prev = now; }
   check('ownership is stable across idle frames', flips === 0, `${flips} flips`);
 
-  // Scrolling back must hand it home, and the playhead must not rewind from
-  // wherever the connector left it.
+  // Scrolling all the way back must not have moved anything between scenes.
   scrollTo(0);
-  check('scrolling back returns the element to the dive',
+  check('scrolling back leaves the opening element on its own dive',
     videosIn(host)[0] === v0 && scenes[0].children.includes(v0));
+  const expected = sections.map((s) => s.clip);
+  const mismatched = scenes.map((s, i) => {
+    const v = s.children.filter((c) => c.tagName === 'video')[0];
+    return v && v._src !== expected[i] ? { i, got: v._src, want: expected[i] } : null;
+  }).filter(Boolean);
+  check('no scene ever displays a clip that is not its own', mismatched.length === 0,
+    JSON.stringify(mismatched));
   check('no scene holds two videos after all that scrolling',
     scenes.every((s) => s.children.filter((c) => c.tagName === 'video').length <= 1));
 }
@@ -510,7 +543,7 @@ console.log('hero engine: clip sharing over the real 5-scene / 9-segment chain')
   // nobody can see. So this keys off the segment CONTAINING y -- the one the reader
   // is actually inside -- which is the same rule the engine now uses.
   const viol = [];
-  for (let y = 0; y <= 8700; y += 7) {
+  for (let y = 0; y <= 5700; y += 7) {
     scrollTo(y);
     const p = probeOf(host);
     const urls = new Set(p.segments.filter((s) => s.hasClip).map((s) => s.clip));

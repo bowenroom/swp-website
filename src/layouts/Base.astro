@@ -7,10 +7,11 @@
 // is the language THIS page is written in. The switch therefore always points
 // at routeFor(id, otherLang) — never at a hand-guessed path.
 import '../styles/kami.css';
+import '../styles/over-film.css';
 import { navLabel } from '../content/site.js';
 import { htmlLang, routeFor, siteName, switchHref } from '../i18n.js';
 
-const { id, lang, title, lede, heading, hiddenH1 } = Astro.props;
+const { id, lang, title, lede, heading, hiddenH1, overFilm } = Astro.props;
 
 // The page's own URL must agree with the language it claims to be written in.
 // A page living at src/pages/en/** that declares lang="zh" is a one-character
@@ -68,7 +69,7 @@ const section = id.split('/')[0];
     <!-- Clipped rather than display:none, which would drop the heading from
          the accessibility tree along with the visual. -->
     {hiddenH1 && <h1 class="visually-hidden">{hiddenH1}</h1>}
-    <header class="masthead">
+    <header class:list={['masthead', overFilm && 'masthead--over-film']}>
       <div class="masthead-inner">
         <a class="wordmark" href={routeFor('', lang)}>{siteName(lang)}</a>
         <nav aria-label={lang === 'zh' ? '主导航' : 'Main'}>
@@ -85,7 +86,7 @@ const section = id.split('/')[0];
       </div>
     </header>
 
-    <main>
+    <main class:list={['site-main', overFilm && 'site-main--over-film']}>
       {heading && <h1>{heading}</h1>}
       {lede && <p class="lede">{lede}</p>}
       <slot />

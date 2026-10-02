@@ -40,11 +40,21 @@ const sections = copy.sections.map((s) => {
   };
 });
 
-// One connector per gap, reusing the outgoing scene's clip. A null entry is
-// explicitly allowed: the engine then crossfades straight into the next dive
-// instead of playing a fly-over, which is what the clip-less decision scene
-// needs anyway.
-const connectors = sections.slice(0, -1).map((s) => clipFor(SCENE_ASSETS[s.id].clip));
+// One connector per gap, and every one of them is null.
+//
+// A connector is meant to be its OWN short clip: scroll-world builds a fly-over
+// whose endpoints are the neighbouring dives' real first/last frames, so the
+// seam reads as continuous camera motion. No such transitional clips exist for
+// this film, and pointing a connector at the outgoing dive's clip made every
+// scene play TWICE -- the dive ran the file to its last frame, then the very
+// same file ran again from its first frame over the next stretch of scroll.
+// That is the 'the last scene keeps repeating' artefact, and no amount of
+// engine tuning hides it, because the duplication is in the data, not the code.
+//
+// A null connector is a first-class case (scrub-engine.js: a falsy entry skips
+// the segment entirely), so the chain collapses to five dives that cross-dissolve
+// straight into each other. Same number of scenes, same copy timing, no replay.
+const connectors = sections.slice(0, -1).map(() => null);
 ---
 
 <div class="hero-film" id="world" data-lang={lang}></div>
@@ -74,6 +84,13 @@ const connectors = sections.slice(0, -1).map((s) => clipFor(SCENE_ASSETS[s.id].c
       // keys off viewport width (max-width: 860px) as well as pointer type, so a
       // narrow desktop window also gets stills.
       stillOnlyMobile: true,
+      // The homepage news dock floats over the top of the film rather than
+      // sitting before it, so the first clip plays a 0.85vh strip behind that
+      // layer before the first dive's own scroll range begins. Without it the
+      // film's runway would start a full screen down the document and the video
+      // would only begin after the dock had scrolled away. See PRE_ROLL in
+      // scrub-engine.js -- 0 disables it, and any other page is untouched.
+      preRoll: 0.85,
       sections,
       connectors,
       diveScroll: 1.25,

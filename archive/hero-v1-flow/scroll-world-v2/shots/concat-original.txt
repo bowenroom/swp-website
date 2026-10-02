@@ -1,0 +1,4 @@
+file '/Volumes/01.MyFiles/01.InProgress/08-agent-working/09-swp-website/archive/hero-v1-flow/scroll-world-v2/shots/s1-approach.mp4'
+file '/Volumes/01.MyFiles/01.InProgress/08-agent-working/09-swp-website/archive/hero-v1-flow/scroll-world-v2/shots/s2-sensing.mp4'
+file '/Volumes/01.MyFiles/01.InProgress/08-agent-working/09-swp-website/archive/hero-v1-flow/scroll-world-v2/shots/s3-fusion.mp4'
+file '/Volumes/01.MyFiles/01.InProgress/08-agent-working/09-swp-website/archive/hero-v1-flow/scroll-world-v2/shots/s4-decision.mp4'

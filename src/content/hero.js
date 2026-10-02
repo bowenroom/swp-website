@@ -9,7 +9,21 @@
 // public/hero/vid/ and the stills in public/hero/.
 export const HERO = {
   zh: {
-    brand: { name: '师威鹏', href: '/' },
+    // The masthead carries three things, in reading order: the mark, the
+    // person, the lab. `mark` replaces the engine's default gradient tile, and
+    // `affiliations` renders on the trailing edge. The logo files live in
+    // public/brand/ and are the institutions' official artwork, copied
+    // unmodified -- see docs/brand-assets.md for provenance.
+    brand: {
+      name: '师威鹏',
+      href: '/',
+      mark: '/brand/lion-avatar.png',
+      suffix: 'LionPilotLab',
+      affiliations: [
+        { logo: '/brand/seu-logo.svg', name: '东南大学' },
+        { logo: '/brand/jsnu-logo.png', name: '江苏师范大学' },
+      ],
+    },
     hint: '向下滚动',
     sections: [
       {
@@ -64,7 +78,16 @@ export const HERO = {
     ],
   },
   en: {
-    brand: { name: 'Weipeng Shi', href: '/en/' },
+    brand: {
+      name: 'Weipeng Shi',
+      href: '/en/',
+      mark: '/brand/lion-avatar.png',
+      suffix: 'LionPilotLab',
+      affiliations: [
+        { logo: '/brand/seu-logo.svg', name: 'Southeast University' },
+        { logo: '/brand/jsnu-logo.png', name: 'Jiangsu Normal University' },
+      ],
+    },
     hint: 'scroll',
     sections: [
       {

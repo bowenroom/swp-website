@@ -92,7 +92,7 @@ const section = id.split('/')[0];
       <slot />
     </main>
 
-    <footer class="site-footer">
+    <footer class:list={['site-footer', overFilm && 'site-footer--over-film']}>
       <div class="wrap">
         <p>© {new Date().getFullYear()} {siteName(lang)}</p>
       </div>

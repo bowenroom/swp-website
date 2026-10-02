@@ -67,3 +67,22 @@
   margin-left: 0;
   max-width: none;
 }
+
+/* The film's fixed layers are only handed back once the film's own scroll box
+ * has left the document (see the retire test in scrub-engine.js). On the
+ * homepage the footer is 79px tall — far shorter than a viewport — so it can
+ * never scroll the film off before the page ends, and waiting for the film to
+ * disappear is what used to leave screens of empty container above it.
+ *
+ * So the footer does not wait: it paints OVER the last frame. It has to be
+ * full-bleed, because `.site-footer`'s centred measure would otherwise let the
+ * moving video show through on both sides of the copyright line. `z-index` sits
+ * above the film's highest fixed layer (the scrollbar, 60) and below the
+ * masthead (200); `.wrap` keeps the text exactly where every other page puts it.
+ */
+.site-footer--over-film {
+  position: relative;
+  z-index: 140;
+  max-width: none;
+  background: var(--parchment);
+}

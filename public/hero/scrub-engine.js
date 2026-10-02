@@ -240,6 +240,10 @@ function mountScrollWorld(container, config) {
   // Measuring the container once per layout keeps every consumer -- segment
   // geometry, jumpTo, the progress bar, the retire test -- in document space.
   let originY = 0;
+  // Height the last layout() gave the track — i.e. how far down the document the
+  // container's own box ends. The retire test needs it: the runway's end and the
+  // container's end are different numbers on a pre-rolled page.
+  let trackHeight = 0;
   let retired = false;
   let held = false;
   let laidOutW = window.innerWidth;   // width the current layout was computed at (see onResize)
@@ -273,13 +277,27 @@ function mountScrollWorld(container, config) {
       // `off` is the runway already laid down, and `s.pre` is this segment's own
       // pre-roll: a strip in front of it that scrolls clip 0 from its first frame.
       s.start = preY + (off + s.pre) * vh;
-      off += s.w;
+      // The pre-roll is added to `off` as well as to `start`. Only adding it to
+      // `start` PUSHED the strip in front of dive 0 without extending the total:
+      // dive 0 then ran from `pre` to `w`, i.e. 0.4vh instead of 1.25vh (its
+      // opening frames scrubbed three times too fast), and the chain came up
+      // PRE_ROLL short of the height the track reserved for it — which is dead
+      // scroll at the bottom of the page.
+      off += s.pre + s.w;
       s.end = preY + off * vh;
     });
     totalW = off;
-    // The track reserves the pre-roll strip too, otherwise the page is shorter
-    // than the runway and the last dive can never complete.
-    track.style.height = (totalW * vh + vh + (PRE_ROLL > 0 ? PRE_ROLL * vh : 0)) + 'px';
+    // The container must end one screen past the END OF THE RUNWAY, measured in
+    // document space. Deriving it from the segments (rather than from
+    // `totalW * vh + vh + PRE_ROLL * vh`) is what makes that true on a page with
+    // a pre-roll: there the runway is pulled up to the top of the document while
+    // the container stays a screen down behind the page's opening layer, so the
+    // two do NOT share an origin and the old formula left the container far
+    // taller than the film it carries. `originY` is the missing term.
+    // One screen of tail is the minimum that lets the reader scroll the last
+    // segment to its final frame before the page ends.
+    trackHeight = Math.max(vh, SEGMENTS[NSEG - 1].end + vh - originY);
+    track.style.height = trackHeight + 'px';
     clampCopyParallax();
     read();
   }
@@ -578,7 +596,12 @@ function mountScrollWorld(container, config) {
       // first clip would stay invisible for exactly the stretch it is supposed
       // to be playing behind the page's opening layer.
       const visStart = visStartOf(s);
-      if (y < visStart) outside = visStart - y; else if (y > s.end) outside = y - s.end;
+      if (y < visStart) outside = visStart - y;
+      // The closing segment does not fade out at its own end. Nothing crossfades
+      // in behind it, so the fade was pure loss: the last frame dimmed over the
+      // final 0.14vh of scroll and the page ended on an empty stage. It holds
+      // until the container itself leaves (see the retire test).
+      else if (y > s.end && i < NSEG - 1) outside = y - s.end;
       const op = smooth(1 - outside / fade);
       s.el.style.opacity = op; s.visible = op > 0.001;
       s.el.style.zIndex = (i === ci) ? '120' : String(100 + Math.round(op * 10));
@@ -704,11 +727,19 @@ function mountScrollWorld(container, config) {
     // belongs to the document again. One class on the container does it, so the
     // stylesheet owns the "what does an idle hero look like" answer and this
     // file only owns WHEN.
-    // The runway ends at the LAST segment's end in document space. Reading it
-    // off the segment rather than recomputing `originY + totalW * vh` is what
-    // keeps this correct once a pre-roll has moved the start of the runway: the
-    // two agree only when the runway begins where the container does.
-    const past = y > SEGMENTS[NSEG - 1].end - vh * 0.25;
+    // The film retires when its own scroll box has left the document, NOT when
+    // the last segment ends. Those two points used to be far apart: the runway
+    // (anchored at the top of the document by the pre-roll) ended while the
+    // container still had screens of height left, so hiding the fixed layers at
+    // the segment end uncovered the container's bare background and the reader
+    // scrolled through empty pages before the footer.
+    //
+    // What follows the film now has to paint OVER it rather than wait for it to
+    // disappear — a footer shorter than a viewport can never scroll a fixed
+    // stage off before the page ends. The homepage footer does exactly that
+    // (see over-film.css). Anything else added after the film must do the same
+    // or sit inside this container.
+    const past = y > originY + trackHeight;
     if (past !== retired) {
       retired = past;
       container.classList.toggle('is-retired', past);

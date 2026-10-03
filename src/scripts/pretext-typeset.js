@@ -42,59 +42,138 @@ const fontOf = (el) => {
  * which looks worse than the orphan it was fixing.
  */
 /**
- * Break `text` into `lineCount` lines of as-equal width as possible, laying
- * them out one at a time with Pretext's per-line cursor (`layoutNextLineRange`
- * takes its own max width for every line, which CSS has no equivalent for).
+ * Word tokens of `raw` with their UTF-16 offsets, via Intl.Segmenter.
  *
- * Why not just narrow the width and let the browser wrap: greedy wrapping
- * fills every line to the width and leaves whatever is over at the end. The
- * panel's 41-character description came back 9-9-9-9-5 at 108px — a
- * five-character orphan tail. Here each line is given its share of what is
- * left (remaining natural width ÷ lines still to place), so the tail lands the
- * same size as its neighbours: 8-8-8-8-9.
- *
- * Returns null when the pass cannot place everything in exactly `lineCount`
- * lines, in which case the caller falls back to ordinary wrapping — a missing
- * sentence is never an acceptable price for tidier ones.
+ * This is the piece greedy wrapping cannot supply. Chinese has no spaces, so
+ * the browser is free to end a line after "交" and start the next with "通事
+ * 故" — correct by the line-breaking rules, and wrong for reading. English
+ * fares worse under a narrowed budget: "Multimodal" came back as "Multimod"
+ * + "al". Segmentation gives us word boundaries to break ON.
  */
-function balanceLines(prep, raw, font, width, lineCount) {
-  let cursor = { segmentIndex: 0, graphemeIndex: 0 };
-  let consumed = 0;
-  const lines = [];
-  for (let i = 0; i < lineCount; i += 1) {
-    const rest = raw.slice(consumed);
-    if (!rest.trim()) break;
-    const restWidth = measureNaturalWidth(prepareWithSegments(rest, font));
-    const linesLeft = lineCount - i;
-    // A little slack so a line may take slightly more than its exact share
-    // rather than stopping a word early; without it the shares drift short in
-    // the other direction. Capped at the column width — the last line's share
-    // is the whole of whatever is left, and for English that can be WIDER than
-    // the column ("where the research starts." at 154px in a 112px box), which
-    // would put a line back inside its span and let it re-wrap silently.
-    const target = Math.max(48, Math.min(width, Math.ceil(restWidth / linesLeft) + 4));
-    const range = layoutNextLineRange(prep, cursor, target);
-    if (!range) break;
-    const line = materializeLineRange(prep, range);
-    if (!line.text) break;
-    lines.push(line.text);
-    cursor = range.end;
-    consumed += line.text.length;
-    // Break-point whitespace is not part of the line text; skip it so `consumed`
-    // tracks the raw string exactly (a stray space would skew every later share).
-    while (/\s/.test(raw[consumed] || '')) consumed += 1;
+function wordTokens(raw) {
+  if (typeof Intl === 'undefined' || typeof Intl.Segmenter === 'undefined') return null;
+  try {
+    const seg = new Intl.Segmenter(undefined, { granularity: 'word' });
+    const out = [];
+    for (const part of seg.segment(raw)) {
+      out.push({ index: part.index, len: part.segment.length });
+    }
+    // The segmenter's last token always ends where the string does; anything
+    // it skipped (it does not, but guard anyway) would corrupt `intact`.
+    if (!out.length) return null;
+    return out;
+  } catch (err) {
+    return null;
   }
-  const placed = raw.slice(consumed).trim();
-  if (lines.length === 0 || placed) return null;
+}
+
+/**
+ * Break `raw` into at most `lineCount` lines of as-equal width as possible,
+ * breaking ONLY between words.
+ *
+ * A small exact DP over token boundaries: every line must fit the column, the
+ * number of lines is fixed (so the rendered height equals what a no-JS page
+ * would have), and the cost is the squared deviation of each line from the
+ * average line width — the classic raggedness objective. O(n²·k), with n in
+ * the tens here, so it runs inside a single frame.
+ *
+ * Returns null when no word-boundary solution exists (a token wider than the
+ * column, no segmenter, or an impossible line count), in which case the caller
+ * falls back to ordinary greedy wrapping.
+ */
+const NO_LINE_START = new Set([
+  '!', '%', ')', ',', '.', ':', ';', '?', ']', '}', '”', '’',
+  '。', '、', '，', '、', '；', '：', '！', '？', '）', '】', '》',
+  '〉', '」', '』', '〕', '…', '～', 'ー',
+]);
+
+function breakByWords(raw, font, width, lineCount, prep, lineHeight) {
+  const tokens = wordTokens(raw);
+  if (!tokens || tokens.length < lineCount) return null;
+  const widths = tokens.map((t) => measureNaturalWidth(prepareWithSegments(raw.slice(t.index, t.index + t.len), font)));
+  const total = widths.reduce((a, b) => a + b, 0);
+  const avg = total / lineCount;
+  const INF = Number.POSITIVE_INFINITY;
+  const n = tokens.length;
+  // dp[i][k]: best cost covering tokens[0..i) with k lines; prev[i][k] = split.
+  const dp = Array.from({ length: n + 1 }, () => Array(lineCount + 1).fill(INF));
+  const prev = Array.from({ length: n + 1 }, () => Array(lineCount + 1).fill(-1));
+  dp[0][0] = 0;
+  for (let k = 1; k <= lineCount; k += 1) {
+    for (let i = 1; i <= n; i += 1) {
+      let sum = 0;
+      for (let j = i; j >= 1; j -= 1) {
+        sum += widths[j - 1];
+        if (sum > width + 0.5) break; // a line that cannot fit is not a candidate
+        // 禁则 (kinsoku): a line may not open with closing punctuation — a
+        // 、 at the head of a line, or English's ":" and ",", is the one way
+        // this algorithm could look WORSE than the browser's own wrapping,
+        // which follows the line-breaking rules. Ruling those candidates out
+        // is what makes the fallback (greedy) the exception, not the result.
+        if (k > 1 && NO_LINE_START.has(raw[tokens[j - 1].index] || '')) continue;
+        const cost = dp[j - 1][k - 1];
+        if (cost === INF) continue;
+        const score = cost + (sum - avg) * (sum - avg);
+        if (score < dp[i][k]) {
+          dp[i][k] = score;
+          prev[i][k] = j;
+        }
+      }
+    }
+  }
+  if (dp[n][lineCount] === INF) return null;
+  const cuts = [];
+  let i = n;
+  for (let k = lineCount; k > 0; k -= 1) {
+    const j = prev[i][k];
+    if (j < 0) return null;
+    cuts.unshift(j);
+    i = j - 1;
+  }
+  // prev[i][k] = j says the k-th line STARTS at token j-1 (the transition
+  // that reached state (i, k)), so line k runs tokens[j-1 .. j(+1)-2] and the
+  // last line runs to the end. Reading those as line ENDS — one off — silently
+  // dropped the final line: the join check caught it at 34 characters against
+  // a 41-character source.
+  const lines = [];
+  for (let k = 0; k < lineCount; k += 1) {
+    const from = k === 0 ? 0 : cuts[k] - 1;
+    const to = k === lineCount - 1 ? n - 1 : cuts[k + 1] - 2;
+    if (to < from) return null;
+    lines.push(raw.slice(tokens[from].index, tokens[to].index + tokens[to].len));
+  }
+  if (lines.length !== lineCount) return null;
+  // Text fidelity is non-negotiable: the slices must concatenate back to the
+  // source, or a word has been silently dropped.
+  if (lines.join('') !== raw) return null;
   return lines;
 }
 
 /**
- * Re-break `el`'s text across as-equal lines as possible, then write the
- * chosen breaks into the DOM as one block per line — so what is painted is
- * what was computed, and a late-arriving web font (re-typeset on
- * document.fonts.ready) can move them without the panel reflowing underneath
- * the reader.
+ * The single breaking decision both panels rely on: word-boundary lines when
+ * possible, greedy wrapping when not. Keeping it in one place is what makes
+ * `measureTextHeight` agree with what actually gets painted — the research
+ * steps animate to this height, and a disagreement would clip the very text
+ * this replaced `max-height` to protect.
+ */
+export function breakLines(raw, font, width, lineHeight, lineCount) {
+  // The kinsoku constraint can make the target line count unreachable — then
+  // one extra line is the cheap fix, and since this same function decides the
+  // height the research steps animate to, the extra line costs nothing but a
+  // few pixels of panel.
+  for (let extra = 0; extra <= 2; extra += 1) {
+    const balanced = breakByWords(raw, font, width, lineCount + extra, null, lineHeight);
+    if (balanced) return balanced;
+  }
+  const prep = prepareWithSegments(raw, font);
+  return layoutWithLines(prep, width, lineHeight).lines.map((l) => l.text);
+}
+
+/**
+ * Re-break `el`'s text and write the chosen lines into the DOM as one block
+ * per line, so what is painted is what was computed and a late web font
+ * (re-typeset on document.fonts.ready) cannot move the breaks underneath the
+ * reader after the marquee has timed its travel against the row heights.
  */
 export function typesetBalanced(el) {
   const text = el.dataset.pretext ?? el.textContent;
@@ -107,14 +186,10 @@ export function typesetBalanced(el) {
     const prep = prepareWithSegments(text, font);
     const lineCount = measureLineStats(prep, width).lineCount;
     if (lineCount <= 1) {
-      // Single line: no spans, no wrapper — the plain string is the truth.
       if (el.firstElementChild) el.textContent = text;
       return;
     }
-    let lines = balanceLines(prep, text, font, width, lineCount);
-    if (!lines) {
-      lines = layoutWithLines(prep, width, lineHeight).lines.map((l) => l.text);
-    }
+    const lines = breakLines(text, font, width, lineHeight, lineCount);
     if (lines.length <= 1) {
       el.textContent = text;
       return;
@@ -137,18 +212,28 @@ export function typesetAll(root, selector) {
   root.querySelectorAll(selector).forEach(typesetBalanced);
 }
 
+
 /**
- * Height this element's text needs at its CURRENT width, without rendering it.
- * This is the one CSS genuinely cannot do: the research steps animate from
- * height 0, and at that moment the element has no laid-out text to measure.
+ * Height this element's text needs at its CURRENT width — from the SAME
+ * breaking decision `typesetBalanced` makes.
+ *
+ * That agreement is the whole point: the research steps animate from height 0
+ * to this number, and if it disagreed with the lines actually painted by even
+ * one line the step would clip its own text — which is exactly what the old
+ * `max-height: 200px` did. The painted line spans are used when they exist,
+ * so the value is literally the height of what is in the DOM.
  */
 export function measureTextHeight(el) {
+  const painted = el.querySelectorAll('.pt-line').length;
+  const { lineHeight } = fontOf(el);
+  if (painted > 0) return painted * lineHeight;
   const text = el.dataset.pretext ?? el.textContent;
-  const { font, lineHeight } = fontOf(el);
+  const { font } = fontOf(el);
   const width = el.clientWidth;
-  if (!width) return 0;
+  if (!width || !text.trim()) return 0;
   try {
-    return layout(prepareWithSegments(text, font), width, lineHeight).height;
+    const lineCount = measureLineStats(prepareWithSegments(text, font), width).lineCount;
+    return breakLines(text, font, width, lineHeight, lineCount).length * lineHeight;
   } catch (err) {
     return 0;
   }

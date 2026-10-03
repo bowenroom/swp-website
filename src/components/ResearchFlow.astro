@@ -1,0 +1,427 @@
+---
+// 研究方向 / Research directions — the right-hand panel of the homepage.
+//
+// Design: OpenViking-style minimal wireframe flow diagram, fused with Kami warm
+// parchment tones. Three numbered steps connected by arrows, sitting on top of
+// a shared "method foundation" layer. The structure mirrors the user's actual
+// research causal chain:
+//
+//   Application (road safety emergency)
+//     → Objects (UAV + autonomous driving)
+//       → Method (multimodal VLM + multi-agent collaboration)
+//
+// Interactions:
+//   - Hover: step highlights, arrow animates
+//   - Click: step expands to show detailed description
+//   - The foundation layer is always visible, supporting all steps
+//
+// Style: thin borders, light background, no shadows, numbered titles.
+// Colors: Kami parchment (#f5f4ed) + ink blue (#1B365D) + muted accents.
+import { researchFor } from '../content/research.js';
+
+const { lang } = Astro.props;
+const research = researchFor(lang);
+const isZh = lang === 'zh';
+
+// The three steps of the research causal chain.
+// These are the actual research directions, not generic placeholders.
+const STEPS = [
+  {
+    id: 'emergency',
+    number: '01',
+    title: isZh ? '道路安全应急' : 'Road Safety Emergency',
+    description: isZh
+      ? '应用层：研究要解决的实际问题。交通事故、道路拥堵、应急响应——这些是研究的出发点。'
+      : 'Application layer: the real problems to solve. Traffic accidents, road congestion, emergency response — these are where the research starts.',
+    accent: '#5b7fa6',
+  },
+  {
+    id: 'vehicles',
+    number: '02',
+    title: isZh ? '无人机 + 无人驾驶' : 'UAV + Autonomous Driving',
+    description: isZh
+      ? '载体层：感知与执行的物理平台。无人机巡检、无人车配送、辅助驾驶——这些是研究的物理载体。'
+      : 'Carrier layer: the physical platforms for perception and execution. UAV inspection, unmanned delivery, assisted driving — these are the physical carriers.',
+    accent: '#8a6f4e',
+  },
+  {
+    id: 'method',
+    number: '03',
+    title: isZh ? '多模态VLM + 多智能体' : 'Multimodal VLM + Multi-Agent',
+    description: isZh
+      ? '方法层：支撑应用与载体的技术底座。视觉语言模型做多模态理解，多智能体做协同决策。'
+      : 'Method layer: the technical foundation supporting applications and carriers. Vision-language models for multimodal understanding, multi-agent systems for collaborative decision-making.',
+    accent: '#4f7d6a',
+  },
+];
+
+// The foundation layer — the shared method that supports all steps.
+const FOUNDATION = {
+  title: isZh ? '方法底座' : 'Method Foundation',
+  description: isZh
+    ? '多模态视觉语言大模型 + 多智能体协同决策'
+    : 'Multimodal Vision-Language Models + Multi-Agent Collaborative Decision',
+  tags: isZh
+    ? ['视觉语言模型', '多智能体', '协同决策']
+    : ['Vision-Language Model', 'Multi-Agent', 'Collaborative Decision'],
+};
+---
+
+<section class="research-flow" data-research-flow aria-labelledby="research-flow-title">
+  <h2 id="research-flow-title" class="research-flow__sr">
+    {isZh ? '研究方向' : 'Research Directions'}
+  </h2>
+
+  <div class="research-flow__panel">
+    <!-- ── Steps row ───────────────────────────────────────────── -->
+    <div class="research-flow__steps">
+      {STEPS.map((step, i) => (
+        <div class="research-flow__step-wrapper">
+          <button
+            class="research-flow__step"
+            data-step={step.id}
+            type="button"
+            aria-expanded="false"
+            style={`--step-accent: ${step.accent}`}
+          >
+            <span class="research-flow__step-number">{step.number}</span>
+            <span class="research-flow__step-title">{step.title}</span>
+            <span class="research-flow__step-toggle" aria-hidden="true">
+              <svg viewBox="0 0 16 16">
+                <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="research-flow__step-description" data-step-description>
+              {step.description}
+            </span>
+          </button>
+          {i < STEPS.length - 1 && (
+            <div class="research-flow__arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 12h14M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+
+    <!-- ── Foundation layer ─────────────────────────────────────── -->
+    <div class="research-flow__foundation">
+      <div class="research-flow__foundation-header">
+        <span class="research-flow__foundation-title">{FOUNDATION.title}</span>
+      </div>
+      <div class="research-flow__foundation-body">
+        <p class="research-flow__foundation-desc">{FOUNDATION.description}</p>
+        <div class="research-flow__foundation-tags">
+          {FOUNDATION.tags.map((tag) => (
+            <span class="research-flow__foundation-tag">{tag}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Connecting arrows (steps → foundation) ───────────────── -->
+    <div class="research-flow__connectors" aria-hidden="true">
+      {STEPS.map((step) => (
+        <div class="research-flow__connector" data-connector={step.id}>
+          <svg viewBox="0 0 24 48">
+            <path d="M12 0v36M6 30l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .research-flow {
+    --rf-bg: #fbf5eb;
+    --rf-border: #d3cfc4;
+    --rf-panel: #fff9ef;
+    --rf-ink: #1d1a15;
+    --rf-ink-soft: #2e281e;
+    --rf-accent: #1B365D;
+    --rf-teal: #39715f;
+    --rf-guide: #dbd5cb;
+    --rf-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+      'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+    --rf-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono',
+      'Roboto Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+    /* Layout is owned by the parent .homepage-panels flex container in
+     * index.astro — this component only provides the panel itself. */
+    position: relative;
+    z-index: 130;
+    /* See the note in index.astro: the wrapper's `> *` re-enable is scoped to
+     * that file's cid and never reaches this child component's root. */
+    pointer-events: auto;
+  }
+
+  .research-flow__sr {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .research-flow__panel {
+    backdrop-filter: blur(12px) saturate(118%);
+    -webkit-backdrop-filter: blur(12px) saturate(118%);
+    background: color-mix(in srgb, var(--rf-bg) 90%, transparent);
+    border: 1px solid var(--rf-border);
+    /* Elevation to match the news card on the other side — two panels floating
+     * over the film should read as the same kind of object. */
+    box-shadow: var(--shadow-soft);
+    /* The gutter is the film's route furniture, not an aesthetic choice: that
+     * rail hangs a label pill ~49px off its left side, and at 1440 the widest
+     * pill's left edge sits 176px in from the viewport. A 20-64px gutter put
+     * this panel's right edge 35px UNDER that pill. */
+    margin-right: 180px;
+    max-width: calc(100vw - 40px);
+    padding: 20px;
+    position: relative;
+    width: clamp(296px, 25vw, 372px);
+  }
+
+  .research-flow__panel::after {
+    border: 1px solid color-mix(in srgb, var(--rf-guide) 55%, transparent);
+    content: '';
+    inset: 5px;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  /* ── Steps ─────────────────────────────────────────────────── */
+  .research-flow__steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .research-flow__step-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .research-flow__step {
+    align-items: flex-start;
+    background: var(--rf-panel);
+    border: 1px solid var(--rf-border);
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    font: inherit;
+    gap: 4px;
+    padding: 12px 14px;
+    text-align: left;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    width: 100%;
+  }
+
+  .research-flow__step:hover,
+  .research-flow__step:focus-visible {
+    border-color: var(--step-accent, var(--rf-accent));
+    background: color-mix(in srgb, var(--rf-panel) 95%, var(--step-accent, var(--rf-accent)) 5%);
+  }
+
+  .research-flow__step:focus-visible {
+    outline: 2px solid var(--step-accent, var(--rf-accent));
+    outline-offset: 2px;
+  }
+
+  .research-flow__step-number {
+    color: var(--step-accent, var(--rf-accent));
+    font-family: var(--rf-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+  }
+
+  .research-flow__step-title {
+    color: var(--rf-ink);
+    font-family: var(--rf-sans);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .research-flow__step-toggle {
+    color: var(--rf-ink-soft);
+    height: 16px;
+    opacity: 0;
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    transition: opacity 0.2s ease;
+    width: 16px;
+  }
+
+  .research-flow__step:hover .research-flow__step-toggle,
+  .research-flow__step:focus-visible .research-flow__step-toggle {
+    opacity: 1;
+  }
+
+  .research-flow__step-toggle svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  .research-flow__step-description {
+    color: var(--rf-ink-soft);
+    font-family: var(--rf-sans);
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, margin 0.3s ease;
+  }
+
+  .research-flow__step[aria-expanded="true"] .research-flow__step-description {
+    max-height: 200px;
+    margin-top: 4px;
+  }
+
+  .research-flow__step[aria-expanded="true"] .research-flow__step-toggle svg {
+    transform: rotate(45deg);
+  }
+
+  .research-flow__arrow {
+    color: var(--rf-guide);
+    height: 20px;
+    margin-left: 20px;
+    width: 20px;
+  }
+
+  .research-flow__arrow svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* ── Foundation ────────────────────────────────────────────── */
+  .research-flow__foundation {
+    background: var(--rf-panel);
+    border: 1px solid var(--rf-border);
+    padding: 14px;
+  }
+
+  .research-flow__foundation-header {
+    border-bottom: 1px solid var(--rf-guide);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .research-flow__foundation-title {
+    color: var(--rf-accent);
+    font-family: var(--rf-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .research-flow__foundation-desc {
+    color: var(--rf-ink-soft);
+    font-family: var(--rf-sans);
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+  }
+
+  .research-flow__foundation-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .research-flow__foundation-tag {
+    background: color-mix(in srgb, var(--rf-bg) 80%, var(--rf-accent) 20%);
+    border: 1px solid var(--rf-guide);
+    border-radius: 3px;
+    color: var(--rf-ink-soft);
+    font-family: var(--rf-sans);
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  /* ── Connectors (visual only) ──────────────────────────────── */
+  .research-flow__connectors {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 8px;
+    pointer-events: none;
+  }
+
+  .research-flow__connector {
+    color: var(--rf-guide);
+    height: 24px;
+    width: 24px;
+  }
+
+  .research-flow__connector svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* ── Responsive ────────────────────────────────────────────── */
+  @media (max-width: 1180px) {
+    .research-flow__panel {
+      width: clamp(280px, 28vw, 330px);
+    }
+    .research-flow__step-title {
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 980px) {
+    .research-flow {
+      padding: 18px 0 22px;
+    }
+    .research-flow__panel {
+      width: min(288px, 44vw);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .research-flow {
+      justify-items: center;
+      min-height: 0;
+      padding: 88px 0 56px;
+    }
+    .research-flow__panel {
+      margin-right: 0;
+      width: min(92%, 380px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .research-flow__step,
+    .research-flow__step-description,
+    .research-flow__step-toggle {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Click to expand/collapse step descriptions.
+  document.querySelectorAll('[data-research-flow]').forEach((panel) => {
+    const steps = panel.querySelectorAll('[data-step]');
+    steps.forEach((step) => {
+      step.addEventListener('click', () => {
+        const expanded = step.getAttribute('aria-expanded') === 'true';
+        step.setAttribute('aria-expanded', String(!expanded));
+      });
+    });
+  });
+</script>

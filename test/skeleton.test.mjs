@@ -132,11 +132,18 @@ for (const [route, lang, heading, sample] of [
   }
 
   check(`/${route}/ has the news dock`, page.includes('data-dock'));
-  check(`/${route}/ dock has the research panel`, page.includes('class="dock-tree"'));
-  // The dock was rebuilt as ONE compact card at the left edge with the research
-  // tree inside it, so the old centre-node and the full-width three-column
-  // arrangement are gone by design. What has to hold instead is that the film
-  // is never covered: the card is a bounded column, not a screen.
+  // The dock was rebuilt TWICE. First into one compact card holding the news
+  // rail and the research tree together; then, because that card covered the
+  // film's copy column wherever it sat, into two independent panels that the
+  // flex row in index.astro pins to opposite edges — news left, research right
+  // — each keeping to the whitespace. So the research tree is no longer inside
+  // the news card at all, and asserting `dock-tree` here (as this line used to)
+  // would now be asserting the layout we deliberately moved away from.
+  check(`/${route}/ wraps the two panels in the splitting row`, page.includes('class="homepage-panels"'));
+  check(`/${route}/ has the research panel on its own`, page.includes('class="research-flow"'));
+  check(`/${route}/ news card no longer carries the tree`, !page.includes('class="dock-tree"'));
+  // What has to hold either way is that the film is never covered: both panels
+  // are bounded columns, not a screen.
   check(`/${route}/ dock has no leftover centre node`, !page.includes('class="dock-node"'));
   check(`/${route}/ dock card is one bounded column`, page.includes('class="dock-card"'));
   // The preview is the card's own affordance and must stay inside the dock so a

@@ -1,41 +1,20 @@
 ---
-// 近期动态 / Recent updates — the card that floats over the homepage film.
+// 近期动态 / Recent updates — the LEFT panel of the homepage.
 //
-// WHAT CHANGED AND WHY (this file was rebuilt twice in one sitting, so the
-// reasoning is worth keeping):
+// The news rail is pinned to the left edge of the viewport, floating over the
+// scroll-film. The research directions are now a SEPARATE right-side panel
+// (ResearchFlow.astro), so this component is news-only.
 //
-// The first version was a full-screen three-column drawing copied from the
-// reference recording — news rail on the left, a ripple node in the middle, a
-// research tree on the right, all on an opaque parchment ground. It read well
-// as its own page and completely hid the scroll-film, which is the entire point
-// of the homepage. The second version made the ground translucent, which fixed
-// the hiding and immediately created the opposite problem: a 100svh blurred
-// wash across the whole viewport with three large columns floating on it, so
-// the video was only ever visible through a dirty pane.
+// The card is compact (~370px wide) so the right two-thirds of the screen
+// belong to the film and the research panel. Nothing here competes with the
+// video for attention.
 //
-// This version is the arrangement the user actually asked for, and it is a
-// different SHAPE rather than a third set of numbers: the film keeps the whole
-// viewport, and the news becomes one compact card pinned to the RIGHT edge.
-// The research tree moves INSIDE that card, under the news, because the copy
-// column is what owns the left half of the screen — every section's kicker,
-// title, body and CTAs are left-aligned with a wash behind them, so a card on
-// the left sat on top of them as the reader scrolled out of the first screen
-// (先看清楚, 再谈判断 in particular). Nothing here spans more than ~400px, so at
-// no point does the content compete with the film for attention.
-//
-// COLOURS ARE read off the recording (1280x868) rather than chosen:
-//   card fill #fbf5eb · border #d3cfc4 · panel fill #fff9ef · border #cfcbc1
-//   teal #39715f · guide #dbd5cb · ochre #b5713a · sage #4a7a63
-//
-// What is NOT copied: the recording is of another company's product. The panel
-// spells 师威鹏's own two domains and one shared method. Layout is replicated;
-// identity is not.
+// COLOURS: card fill #fbf5eb · border #d3cfc4 · panel fill #fff9ef ·
+// teal #39715f · guide #dbd5cb · ochre #b5713a · sage #4a7a63
 import { newsFor } from '../content/news.js';
-import { researchFor } from '../content/research.js';
 
 const { lang } = Astro.props;
 const items = newsFor(lang);
-const research = researchFor(lang);
 const isZh = lang === 'zh';
 
 // Dates are stored at the precision the source evidence supports (see news.js)
@@ -98,7 +77,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
   data-dock-dates={JSON.stringify(dateMap)}
   data-dock-links={JSON.stringify(linkMap)}
 >
-  <h2 id="dock-title" class="dock-sr">{isZh ? '近期动态与研究方向' : 'Recent updates and research'}</h2>
+  <h2 id="dock-title" class="dock-sr">{isZh ? '近期动态' : 'Recent updates'}</h2>
 
   <div class="dock-card">
     <!-- ── news rail ───────────────────────────────────────────────
@@ -134,26 +113,6 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
           </ul>
         </div>
       </div>
-    </div>
-
-    <!-- ── research, now under the news inside the same card ────────
-         The tree notation is deliberate rather than decorative: the work really
-         is two application domains standing on one shared method, and an
-         indented tree states that in a way a flat list of tags cannot. -->
-    <div class="dock-tree">
-      <p class="dock-tree__root"><span class="dock-tree__accent">{research.root}</span><span class="dock-tree__slash">://</span></p>
-      <ul class="dock-tree__list">
-        {research.groups.map((g) => (
-          <li class="dock-tree__group">
-            <span class="dock-tree__group-label">{g.label}<span class="dock-tree__slash">/</span></span>
-            <ul class="dock-tree__children">
-              {g.children.map((c) => (
-                <li class="dock-tree__row">{c.label}</li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
     </div>
 
     <!-- ── hover preview ─────────────────────────────────────────────
@@ -213,11 +172,6 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     --dock-sage: #4a7a63;
     --dock-ink: #1d1a15;
     --dock-ink-soft: #2e281e;
-    /* The masthead's height. A first guess, not a constant: the script
-     * re-measures it on load and on resize, because the masthead wraps from one
-     * row to two as the window narrows and a fixed value would leave the card
-     * under it at one width and floating short at another. */
-    --dock-mast: 141px;
     --dock-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
       'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
     --dock-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono',
@@ -226,37 +180,18 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     /* The film is a fixed layer that owns the whole viewport from the first
      * pixel, so this card is the one thing in the document that has to float
      * ABOVE it. 130 clears every film layer (topbar 50, scenes 100-120) and
-     * stays below the masthead (200, see over-film.css). */
+     * stays below the masthead (200, see over-film.css).
+     *
+     * Layout is owned by the parent .homepage-panels flex container in
+     * index.astro — this component only provides the card itself. */
     position: relative;
     z-index: 130;
-
-    /* A one-screen stage, but the CARD is what is placed — not a drawing
-     * centred inside it. Centring the card rather than a 650px rail is what
-     * lets the same markup work on a 720px-tall laptop and a 1080px monitor
-     * without the news running off the bottom.
-     *
-     * The stage is one screen MINUS the masthead rather than one screen, and it
-     * begins directly under the masthead. A full-screen min-height measured
-     * from the document's top made the stage one screen tall starting 189px
-     * down, so a card centred inside it was pushed below the fold at every
-     * window height -- the research tree was never visible without scrolling,
-     * on any screen. Subtracting the masthead measures only the band of screen
-     * the film actually leaves free, so the card is centred in that band and
-     * still clears the masthead above it. The masthead's own height is a
-     * measured value (see the script), because it wraps to two rows on a narrow
-     * window and no single hard-coded number is right at every width. */
-    align-content: center;
-    display: grid;
-    /* The card sits on the RIGHT. The film's copy is left-aligned — every
-     * section's kicker/title/body/CTA stack against the left gutter with a
-     * wash behind them — so a card on the left landed on top of it: "先看清楚,
-     * 再谈判断" and the dock's news rows were fighting for the same column as
-     * the reader scrolled out of the first screen. The right side of the film
-     * is empty by construction (the route rail is the only thing over there),
-     * which is where this belongs. */
-    justify-items: end;
-    min-height: calc(100svh - var(--dock-mast, 141px));
-    padding: 20px 0 24px;
+    /* Own it here rather than in index.astro: see the note there about Astro's
+     * per-component selector scoping. Without this the card inherits the
+     * wrapper's `pointer-events: none` and rows stop responding to the mouse
+     * (keyboard focus, which needs no hit test, keeps working — which is what
+     * made this so easy to miss). */
+    pointer-events: auto;
   }
 
   .dock-sr {
@@ -283,22 +218,10 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
      * separate plane. Both offsets are non-zero — a single blurred halo with no
      * offset reads as a glow, not as paper over video. */
     box-shadow: var(--shadow-soft);
-    /* Pinned to the RIGHT edge with a viewport-relative gutter, never centred:
-     * the copy column belongs to the left of the screen. The gutter is sized
-     * against the film's route furniture rather than picked by eye. That rail
-     * is 34px wide and sits `clamp(14px, 2.4vw, 30px)` off the right edge, and
-     * EVERY dot hangs a label pill off its own left side — the pills are
-     * absolutely positioned, so they reach ~49px (建立) to ~102px (Coordination)
-     * further left than the rail's box, into exactly the band a right-pinned
-     * card would occupy.
-     *
-     * It is a CONSTANT, not a clamp, because the thing it clears is constant:
-     * the rail's own offsets are px-clamped, so measuring the widest pill's
-     * left edge at 1920/1440/1180/980/921/900/861 gives 176/176/174/169/168/
-     * 167/166px of required inset — flat to within 10px while 13vw would have
-     * swung from 112 to 250 across the same range. 180 clears the worst case
-     * with the scrollbar either present or overlaid, in both languages. */
-    margin-right: 180px;
+    /* Pinned to the LEFT edge. The parent .homepage-panels flex container
+     * owns the left/right split; this card just needs a gutter from the left
+     * edge. The film's copy is left-aligned but the card floats above it. */
+    margin-left: clamp(16px, 3vw, 48px);
     max-width: calc(100vw - 40px);
     padding: 20px 0;
     position: relative;
@@ -502,64 +425,12 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     transform: translateX(0);
   }
 
-  /* ── research tree ──────────────────────────────────────────────── */
-  .dock-tree {
-    border-top: 1px solid var(--dock-panel-hair);
-    margin: 16px 20px 0;
-    padding-top: 14px;
-  }
-
-  .dock-tree p,
-  .dock-tree ul { margin: 0; }
-
-  .dock-tree__root {
-    font-family: var(--dock-mono);
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.4;
-    margin-bottom: 6px;
-  }
-
-  .dock-tree__accent,
-  .dock-tree__slash { color: var(--dock-teal-ink); }
-
-  .dock-tree__list {
-    border-left: 1px solid var(--dock-guide);
-    list-style: none;
-    padding-left: 16px;
-  }
-
-  .dock-tree__group-label,
-  .dock-tree__row {
-    font-family: var(--dock-mono);
-    font-size: 13px;
-    letter-spacing: 0;
-    line-height: 1.9;
-  }
-
-  .dock-tree__group-label {
-    color: var(--dock-ink-soft);
-    font-weight: 600;
-  }
-
-  .dock-tree__group-label .dock-tree__slash { color: var(--dock-teal-ink); }
-
-  .dock-tree__children {
-    border-left: 1px solid var(--dock-guide);
-    list-style: none;
-    margin: 0 0 0 2px;
-    padding: 0 0 0 14px;
-  }
-
-  .dock-tree__row { color: var(--dock-ink-soft); }
-
   /* ── hover preview ──────────────────────────────────────────────── */
-  /* Positioned against .dock-card, so `right: 100%` is the card's LEFT edge and
-   * the preview opens INWARD, over the film: never over the news it is
-   * describing. The card is pinned to the RIGHT edge of the screen, so opening
-   * outward would push 276px of panel straight off the viewport. The 14px gap
-   * is now to the left of the card, and it is the same gap the leave handler
-   * below has to survive.
+  /* Positioned against .dock-card, so `left: 100%` is the card's RIGHT edge
+   * and the preview opens INWARD, over the film: never over the news it is
+   * describing. The news card sits at the LEFT edge of the screen now, so
+   * opening outward would push 276px of panel straight off the viewport — the
+   * gap the leave handler has to survive is to the right of the card.
    *
    * `pointer-events` is off while closed and back on once open, so the card can
    * never intercept a click meant for the film, but the reader CAN move the
@@ -571,12 +442,12 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     /* One step deeper than the card it hovers over, so the stacking order is
      * legible without reading the border. */
     box-shadow: var(--shadow-lift);
-    margin-right: 14px;
+    left: 100%;
+    margin-left: 14px;
     opacity: 0;
     padding: 10px;
     pointer-events: none;
     position: absolute;
-    right: 100%;
     top: 0;
     transform: translateY(6px);
     transition: opacity 0.18s ease, transform 0.18s ease;
@@ -703,12 +574,10 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
      * while leaving 166px+ on the label side, which is the side with the
      * smaller budget. */
     .dock-card { width: min(240px, 28vw); }
-    .dock-tree__group-label,
-    .dock-tree__row { font-size: 12px; }
     /* No room to the left of a 240px card on a 900px window, so the preview
      * opens over the card's own left half instead of beside it. It is still
      * pointer-transparent, so nothing is ever unreachable underneath it. */
-    .dock-preview { margin-right: 10px; width: min(252px, calc(100vw - 40px)); }
+    .dock-preview { margin-left: 10px; width: min(252px, calc(100vw - 40px)); }
   }
 
   /* Phone: the film degrades to stills, so the card becomes the page. The
@@ -942,16 +811,27 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       // rect instead is what makes the preview line up with the row the reader
       // is actually pointing at. This runs once per hover, not per pointermove,
       // so the read is not a cost.
+      // Measure with the panel LAYOUTED. A [hidden] panel is display:none, so
+      // offsetParent reads null and offsetHeight reads 0 — this block used to
+      // run before the un-hide below, fell back to cardTop = 0, and placed the
+      // panel `rowTop - 20` measured from the TOP OF THE PAGE instead of from
+      // the card: ~162px below the row it belongs beside. The pointer then sat
+      // outside the panel it had just opened, the leave guard armed, and the
+      // panel closed 260ms later while the reader was still reaching for it.
+      // That is why hover looked broken while keyboard focus (which never
+      // measures) worked.
+      const wasHidden = preview.hidden;
+      if (wasHidden) preview.hidden = false;
       if (row) {
-        const cardTop = preview.offsetParent ? preview.offsetParent.getBoundingClientRect().top : 0;
+        const cardEl = preview.parentElement;
+        const cardTop = cardEl ? cardEl.getBoundingClientRect().top : 0;
         const y = row.getBoundingClientRect().top - cardTop - 20;
         // Keep the card inside the viewport: past the last row, an unbounded top
         // would push the preview's bottom off the bottom of a short window.
         const room = dock.clientHeight - preview.offsetHeight - 24;
         preview.style.top = Math.max(0, Math.min(y, Math.max(0, room))) + 'px';
       }
-      if (preview.hidden) {
-        preview.hidden = false;
+      if (wasHidden) {
         // One frame with the class applied is what lets the transition run: a
         // class added in the same frame as the un-hide is applied in the same
         // style recalculation and the browser has no "from" state to animate

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import RecentUpdates from '../../components/RecentUpdates.astro';
+import ResearchFlow from '../../components/ResearchFlow.astro';
 import Hero from '../../components/Hero.astro';
 import { pageCopy } from '../../content/site.js';
 
@@ -10,6 +11,41 @@ const copy = pageCopy(id, lang);
 ---
 
 <Base id={id} lang={lang} title={copy.title} hiddenH1={copy.heading} overFilm>
-  <RecentUpdates lang={lang} />
+  <div class="homepage-panels">
+    <RecentUpdates lang={lang} />
+    <ResearchFlow lang={lang} />
+  </div>
   <Hero lang={lang} />
 </Base>
+
+<style>
+  /* The mirror of src/pages/index.astro — same two panels, same split. The
+   * English homepage has its own file, so a layout change applied only to the
+   * Chinese one ships an English page carrying the previous structure: a news
+   * card with no research panel beside it at all, because RecentUpdates no
+   * longer renders the tree. Keep the two files in step. */
+  .homepage-panels {
+    position: relative;
+    z-index: 130;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    min-height: calc(100svh - var(--dock-mast, 141px));
+    padding: 20px 0 24px;
+    /* The wrapper spans the whole first screen, so it lets clicks through to
+     * the film underneath; each panel takes them back on its own root (see the
+     * note in index.astro about why a `> *` rule here would not reach a child
+     * component's element, which is how hover silently went dead once). */
+    pointer-events: none;
+  }
+
+  @media (max-width: 760px) {
+    .homepage-panels {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 88px 0 56px;
+    }
+  }
+</style>

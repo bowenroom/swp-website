@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import RecentUpdates from '../components/RecentUpdates.astro';
+import ResearchFlow from '../components/ResearchFlow.astro';
 import Hero from '../components/Hero.astro';
 import { pageCopy } from '../content/site.js';
 
@@ -10,6 +11,43 @@ const copy = pageCopy(id, lang);
 ---
 
 <Base id={id} lang={lang} title={copy.title} hiddenH1={copy.heading} overFilm>
-  <RecentUpdates lang={lang} />
+  <div class="homepage-panels">
+    <RecentUpdates lang={lang} />
+    <ResearchFlow lang={lang} />
+  </div>
   <Hero lang={lang} />
 </Base>
+
+<style>
+  .homepage-panels {
+    position: relative;
+    z-index: 130;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    min-height: calc(100svh - var(--dock-mast, 141px));
+    padding: 20px 0 24px;
+    pointer-events: none;
+  }
+
+  /* The wrapper spans the whole first screen, so it must let clicks through to
+   * the film underneath; the two panels take them back themselves.
+   *
+   * That re-enable used to be written `.homepage-panels > *`. Astro scopes a
+   * component's selectors to ITS OWN data-astro-cid, so the universal selector
+   * only matched children carrying this file's cid — and both panel roots are
+   * child components carrying theirs. The rule never matched, every panel
+   * inherited `pointer-events: none`, and hover stopped working while keyboard
+   * focus (which needs no hit test) kept working. Each component now sets the
+   * property on its own root, where the scope is guaranteed to match. */
+
+  @media (max-width: 760px) {
+    .homepage-panels {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 88px 0 56px;
+    }
+  }
+</style>

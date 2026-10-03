@@ -10,6 +10,7 @@
     "test": "node test/hero-engine.test.mjs && node test/skeleton.test.mjs && node test/link-graph.mjs"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.9",
     "astro": "^7.3.5"
   }
 }

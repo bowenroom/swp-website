@@ -68,11 +68,10 @@ const FOUNDATION = {
 ---
 
 <section class="research-flow" data-research-flow aria-labelledby="research-flow-title">
-  <h2 id="research-flow-title" class="research-flow__sr">
-    {isZh ? '研究方向' : 'Research Directions'}
-  </h2>
-
   <div class="research-flow__panel">
+    <h2 id="research-flow-title" class="research-flow__kicker">
+      {isZh ? '研究方向' : 'Research'}
+    </h2>
     <!-- ── Steps row ───────────────────────────────────────────── -->
     <div class="research-flow__steps">
       {STEPS.map((step, i) => (
@@ -87,8 +86,12 @@ const FOUNDATION = {
             <span class="research-flow__step-number">{step.number}</span>
             <span class="research-flow__step-title">{step.title}</span>
             <span class="research-flow__step-toggle" aria-hidden="true">
+              {/* Two paths, not one: the horizontal one stays and the vertical
+                  one fades as the step opens, so + becomes − instead of the
+                  icon having to be swapped on every click. */}
               <svg viewBox="0 0 16 16">
-                <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <path class="research-flow__toggle-h" d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <path class="research-flow__toggle-v" d="M8 3v10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
             </span>
             <span class="research-flow__step-description" data-step-description>
@@ -158,15 +161,19 @@ const FOUNDATION = {
     pointer-events: auto;
   }
 
-  .research-flow__sr {
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    height: 1px;
-    overflow: hidden;
-    position: absolute;
-    white-space: nowrap;
-    width: 1px;
+    /* Same micro-label the news card carries, so the two panels read as a pair:
+     12px, 600, wide tracking, uppercase — the one place tracking is sanctioned. */
+  .research-flow__kicker {
+    color: var(--rf-teal);
+    font-family: var(--rf-sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.5;
+    margin: 0 0 8px;
+    text-transform: uppercase;
   }
+
 
   .research-flow__panel {
     backdrop-filter: blur(12px) saturate(118%);
@@ -187,57 +194,81 @@ const FOUNDATION = {
      * so the clearance holds at 16px at every viewport width. */
     margin-right: 156px;
     max-width: calc(100vw - 40px);
-    padding: 20px;
+    /* 14px, not 20: at 180px the old padding left 138px of content while the news card opposite gave its rows 148px. */
+    padding: 16px 14px 14px;
     position: relative;
     /* Half the old 360px — three numbered steps and a tag row were claiming a
      * quarter of the screen. */
     width: clamp(148px, 12.5vw, 186px);
   }
 
-  .research-flow__panel::after {
-    border: 1px solid color-mix(in srgb, var(--rf-guide) 55%, transparent);
-    content: '';
-    inset: 5px;
-    pointer-events: none;
-    position: absolute;
-  }
+  
 
   /* ── Steps ─────────────────────────────────────────────────── */
-  .research-flow__steps {
+    .research-flow__steps {
+    border-top: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
+
+    /* Step, then the chain arrow UNDER it: side by side at 180px cost the step
+     28px of a column that only has 150px to give. */
   .research-flow__step-wrapper {
-    display: flex;
     align-items: center;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
   }
 
-  .research-flow__step {
+
+    .research-flow__step {
     align-items: flex-start;
-    background: var(--rf-panel);
-    border: 1px solid var(--rf-border);
+    background: none;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
     color: inherit;
     cursor: pointer;
     display: flex;
     flex: 1;
     flex-direction: column;
     font: inherit;
-    gap: 4px;
-    padding: 12px 14px;
+    gap: 2px;
+    padding: 9px 26px 10px 12px;
+    position: relative;
     text-align: left;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    transition: background 0.2s ease;
     width: 100%;
   }
 
-  .research-flow__step:hover,
-  .research-flow__step:focus-visible {
-    border-color: var(--step-accent, var(--rf-accent));
-    background: color-mix(in srgb, var(--rf-panel) 95%, var(--step-accent, var(--rf-accent)) 5%);
+  /* The accent rail from the news card, so both panels light up the same way:
+     a bar scaled on the GPU rather than layout animated on a row the marquee
+     is already transforming. */
+  .research-flow__step::before {
+    background: var(--step-accent, var(--rf-accent));
+    content: '';
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform 0.2s ease;
+    width: 2px;
   }
+
+  .research-flow__step:hover::before,
+  .research-flow__step:focus-visible::before,
+  .research-flow__step[aria-expanded='true']::before {
+    transform: scaleY(1);
+  }
+
+
+    .research-flow__step:hover,
+  .research-flow__step:focus-visible {
+    background: color-mix(in srgb, var(--rf-panel) 70%, transparent);
+  }
+
 
   .research-flow__step:focus-visible {
     outline: 2px solid var(--step-accent, var(--rf-accent));
@@ -253,24 +284,33 @@ const FOUNDATION = {
     line-height: 1.4;
   }
 
-  .research-flow__step-title {
+    .research-flow__step-title {
     color: var(--rf-ink);
     font-family: var(--rf-sans);
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
     line-height: 1.45;
+    transition: color 0.18s ease;
   }
 
-  .research-flow__step-toggle {
-    color: var(--rf-ink-soft);
-    height: 16px;
-    opacity: 0;
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    transition: opacity 0.2s ease;
-    width: 16px;
+  .research-flow__step:hover .research-flow__step-title,
+  .research-flow__step:focus-visible .research-flow__step-title,
+  .research-flow__step[aria-expanded='true'] .research-flow__step-title {
+    color: var(--rf-accent);
   }
+
+
+    .research-flow__step-toggle {
+    color: var(--rf-ink-soft);
+    height: 14px;
+    opacity: 0.45;
+    position: absolute;
+    right: 10px;
+    top: 11px;
+    transition: opacity 0.2s ease;
+    width: 14px;
+  }
+
 
   .research-flow__step:hover .research-flow__step-toggle,
   .research-flow__step:focus-visible .research-flow__step-toggle {
@@ -283,31 +323,47 @@ const FOUNDATION = {
     width: 100%;
   }
 
+    /* The height is written inline by the script, which asks Pretext what this
+     text measures at this exact width BEFORE the animation starts. The old
+     `max-height: 200px` guessed in both directions: short descriptions slid
+     into place over distance that never existed, and anything past 200px was
+     cut off. */
+  /* :global — these line spans are written at runtime by the typesetter, so
+     they never carry this component's data-astro-cid and a scoped selector
+     would silently miss them. */
+  :global(.pt-line) {
+    display: block;
+  }
+
   .research-flow__step-description {
     color: var(--rf-ink-soft);
+    display: block;
     font-family: var(--rf-sans);
     font-size: 12px;
+    height: 0;
     line-height: 1.6;
-    max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease, margin 0.3s ease;
+    transition: height 0.3s ease;
   }
 
-  .research-flow__step[aria-expanded="true"] .research-flow__step-description {
-    max-height: 200px;
-    margin-top: 4px;
+  .research-flow__step-toggle-v {
+    transition: opacity 0.2s ease;
   }
 
-  .research-flow__step[aria-expanded="true"] .research-flow__step-toggle svg {
-    transform: rotate(45deg);
+  .research-flow__step[aria-expanded='true'] .research-flow__toggle-v {
+    opacity: 0;
   }
 
+  /* The chain arrows carry the argument of this panel (application -> carrier
+     -> method), so at this size they are tinted toward the accent rather than
+     the hairline colour: in the guide colour they read as stray marks. */
   .research-flow__arrow {
-    color: var(--rf-guide);
-    height: 20px;
-    margin-left: 20px;
-    width: 20px;
+    color: color-mix(in srgb, var(--rf-accent) 55%, var(--rf-guide));
+    height: 14px;
+    margin: 4px 0;
+    width: 14px;
   }
+
 
   .research-flow__arrow svg {
     display: block;
@@ -316,27 +372,28 @@ const FOUNDATION = {
   }
 
   /* ── Foundation ────────────────────────────────────────────── */
+    /* No second box: a bordered block inside a bordered panel was the boxiest
+     thing on the page. A rule across the top separates it for 1px instead of
+     four borders. */
   .research-flow__foundation {
-    background: var(--rf-panel);
-    border: 1px solid var(--rf-border);
-    padding: 14px;
+    background: none;
+    border-top: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
+    padding-top: 12px;
   }
 
   .research-flow__foundation-header {
-    border-bottom: 1px solid var(--rf-guide);
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+    margin-bottom: 8px;
   }
 
   .research-flow__foundation-title {
     color: var(--rf-accent);
-    font-family: var(--rf-sans);
-    font-size: 13px;
+    font-family: var(--rf-mono);
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
   }
 
-  .research-flow__foundation-desc {
+.research-flow__foundation-desc {
     color: var(--rf-ink-soft);
     font-family: var(--rf-sans);
     font-size: 12px;
@@ -350,15 +407,17 @@ const FOUNDATION = {
     gap: 6px;
   }
 
-  .research-flow__foundation-tag {
-    background: color-mix(in srgb, var(--rf-bg) 80%, var(--rf-accent) 20%);
+    .research-flow__foundation-tag {
+    background: color-mix(in srgb, var(--rf-panel) 86%, transparent);
     border: 1px solid var(--rf-guide);
-    border-radius: 3px;
+    border-radius: 999px;
     color: var(--rf-ink-soft);
     font-family: var(--rf-sans);
-    font-size: 11px;
-    padding: 3px 8px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    padding: 2px 8px;
   }
+
 
   /* ── Connectors (visual only) ──────────────────────────────── */
   .research-flow__connectors {
@@ -421,14 +480,72 @@ const FOUNDATION = {
 </style>
 
 <script>
-  // Click to expand/collapse step descriptions.
+  import { typesetAll, measureTextHeight } from '../scripts/pretext-typeset';
+
+  // Two jobs: break this panel's copy the same way the news card does, and
+  // open each step at EXACTLY the height its text needs.
+  //
+  // The height is the part CSS could not do. The description animates from
+  // height 0, and at height 0 the element has no laid-out text for
+  // getBoundingClientRect to read — which is why this used to be
+  // `max-height: 200px`, a guess that played short descriptions out slowly
+  // and cut long ones off. Pretext lays the paragraph out arithmetically at
+  // the panel's real width first, so the animation is told its destination
+  // before it starts and nothing shifts while it runs.
   document.querySelectorAll('[data-research-flow]').forEach((panel) => {
-    const steps = panel.querySelectorAll('[data-step]');
-    steps.forEach((step) => {
+    const typeset = () => {
+      typesetAll(panel, '.research-flow__step-title');
+      typesetAll(panel, '[data-step-description]');
+      typesetAll(panel, '.research-flow__foundation-desc');
+    };
+    typeset();
+
+    panel.querySelectorAll('[data-step]').forEach((step) => {
+      const desc = step.querySelector('[data-step-description]');
+      if (!desc) return;
+
       step.addEventListener('click', () => {
         const expanded = step.getAttribute('aria-expanded') === 'true';
-        step.setAttribute('aria-expanded', String(!expanded));
+        if (expanded) {
+          // From wherever it is now: 'auto' after a finished animation, or a
+          // pixel value mid-flight. Measuring first means the collapse covers
+          // the same distance the expansion did.
+          desc.style.height = desc.getBoundingClientRect().height + 'px';
+          void desc.offsetHeight;
+          desc.style.height = '0px';
+          step.setAttribute('aria-expanded', 'false');
+          return;
+        }
+        const height = measureTextHeight(desc);
+        // 0 means the measurement failed (no width, or a font that would not
+        // parse). Refusing to open is correct: an open step with no height
+        // would clip its own text, which is the bug this replaced.
+        if (!height) return;
+        desc.style.height = '0px';
+        void desc.offsetHeight;
+        desc.style.height = height + 'px';
+        step.setAttribute('aria-expanded', 'true');
+      });
+
+      desc.addEventListener('transitionend', (event) => {
+        if (event.propertyName !== 'height') return;
+        // Hand the height back to layout once the move is done: a resize or a
+        // late font has to be able to reflow an open step.
+        if (step.getAttribute('aria-expanded') === 'true') desc.style.height = 'auto';
       });
     });
+
+    // A web font landing re-breaks every paragraph here, so the copy is
+    // re-typeset and any step left open is given its height back.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready
+        .then(() => {
+          typeset();
+          panel
+            .querySelectorAll('[data-step][aria-expanded="true"] [data-step-description]')
+            .forEach((d) => { d.style.height = 'auto'; });
+        })
+        .catch(() => {});
+    }
   });
 </script>

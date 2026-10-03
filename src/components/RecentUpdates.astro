@@ -93,13 +93,19 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
             {items.map((item) => (
               <li class="dock-row" data-kind={item.kind} data-id={item.id} style={`--accent:${KIND_ACCENT[item.kind]}`}>
                 <button class="dock-item" type="button" data-dock-item data-id={item.id}>
-                  <span class="dock-item__icon">
-                    <svg viewBox="0 0 26.4 26.4" aria-hidden="true">
-                      <path d={KIND_MARK[item.kind]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
-                    </svg>
-                  </span>
                   <span class="dock-item__text">
-                    <span class="dock-item__date">{formatDate(item.date)}</span>
+                    {/* Date and kind mark share one micro-line: at 180px the old
+                        three-across row gave the headline about 100px to live
+                        in, so every title wrapped twice. Stacked, the headline
+                        gets the full column. */}
+                    <span class="dock-item__meta">
+                      <span class="dock-item__icon">
+                        <svg viewBox="0 0 26.4 26.4" aria-hidden="true">
+                          <path d={KIND_MARK[item.kind]} fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+                        </svg>
+                      </span>
+                      <span class="dock-item__date">{formatDate(item.date)}</span>
+                    </span>
                     <span class="dock-item__label">{item.short[lang]}</span>
                   </span>
                   <span class="dock-item__go" aria-hidden="true">
@@ -170,6 +176,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     --dock-guide: #dbd5cb;
     --dock-ochre: #b5713a;
     --dock-sage: #4a7a63;
+    --dock-navy: #1b365d;
     --dock-ink: #1d1a15;
     --dock-ink-soft: #2e281e;
     --dock-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
@@ -255,7 +262,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
      * sanctions. No body text in this component sets letter-spacing above 0. */
     letter-spacing: 0.16em;
     line-height: 1.5;
-    margin: 0 20px 8px;
+    margin: 0 14px 8px;
     text-transform: uppercase;
   }
 
@@ -319,16 +326,40 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     padding: 0;
   }
 
-  .dock-row {
-    border-top: 1px solid color-mix(in srgb, var(--dock-hair) 75%, transparent);
+  /* ── one entry ────────────────────────────────────────────────
+     The column is 180px, so an entry is STACKED, not laid out across: one
+     micro-line of mark + date, then the headline in the full column. The old
+     three-across row (mark | text | arrow) left the headline about 100px, which
+     is why every title broke twice and the card read as a cramped table.
+
+     A hairline spine runs the length of the list and the per-kind accent bar
+     grows over it while hovered: that spine is what turns ten dated lines into
+     a timeline. */
+  .dock-list {
     position: relative;
   }
 
-  /* The kind's own colour, as a 2px bar that grows from the top edge on hover.
-   * A wash behind the text would fight the translucency; a bar reads as an
-   * index mark and keeps the four kinds distinguishable at a glance. */
+  .dock-list::before {
+    background: color-mix(in srgb, var(--dock-hair) 70%, transparent);
+    content: '';
+    bottom: 8px;
+    left: 5px;
+    position: absolute;
+    top: 8px;
+    width: 1px;
+  }
+
+  .dock-row {
+    border-top: 1px solid color-mix(in srgb, var(--dock-hair) 55%, transparent);
+    position: relative;
+  }
+
+  .dock-row:first-child {
+    border-top: 0;
+  }
+
   .dock-row::before {
-    background: var(--accent, transparent);
+    background: var(--accent, var(--dock-teal));
     content: '';
     /* Full-height bar, scaled down to nothing rather than animated from
      * `height: 0`. Animating height re-runs layout on every frame of the 0.2s
@@ -338,11 +369,11 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
      * on the GPU instead and never touches layout, and because the element is
      * already full height the visual result is identical. */
     height: 100%;
-    left: 0;
+    left: 3px;
     position: absolute;
     top: 0;
     transform: scaleY(0);
-    transform-origin: top;
+    transform-origin: center;
     transition: transform 0.2s ease;
     width: 2px;
   }
@@ -350,15 +381,14 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
   .dock-row.is-hot::before { transform: scaleY(1); }
 
   .dock-item {
-    align-items: center;
     background: none;
     border: 0;
     color: inherit;
     cursor: pointer;
-    display: flex;
+    display: block;
     font: inherit;
-    gap: 12px;
-    padding: 10px 20px;
+    padding: 9px 14px 10px 16px;
+    position: relative;
     text-align: left;
     width: 100%;
   }
@@ -373,54 +403,68 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     outline-offset: -3px;
   }
 
+  .dock-item__text {
+    display: block;
+    min-width: 0;
+  }
+
+  .dock-item__meta {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
   .dock-item__icon {
     color: var(--accent, var(--dock-teal));
     flex: none;
-    height: 22px;
-    width: 22px;
+    height: 13px;
+    width: 13px;
   }
 
   .dock-item__icon svg { display: block; height: 100%; width: 100%; }
 
-  .dock-item__text {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-  }
-
   .dock-item__date {
     color: var(--dock-teal-ink);
     font-family: var(--dock-mono);
-    font-size: 11px;
-    letter-spacing: 0.03em;
+    font-size: 10px;
+    letter-spacing: 0.07em;
     line-height: 1.4;
   }
 
   .dock-item__label {
     color: var(--dock-ink);
+    display: block;
     font-family: var(--dock-sans);
-    font-size: 15px;
+    font-size: 13.5px;
     font-weight: 600;
-    /* 1.45 rather than the 1.35 the recording was measured at: the measured
-     * value was for a single short line, and this label wraps to two on a
-     * narrow window, where 1.35 sets the second line into the first. */
     line-height: 1.45;
     min-width: 0;
+    transition: color 0.18s ease;
   }
 
-  /* The affordance arrow. Hidden until hover so the resting rail is quiet, and
-   * hidden from AT as well, since the button's own label already says what it
-   * opens. */
+  /* One block per line, written by Pretext (see the script): the breaks are
+     the ones the balance search picked, not the browser's first guess, and
+     they hold until the next typeset instead of shifting when a font lands. */
+  :global(.pt-line) {
+    display: block;
+  }
+
+  .dock-item:hover .dock-item__label,
+  .dock-item:focus-visible .dock-item__label {
+    color: var(--dock-navy);
+  }
+
   .dock-item__go {
     color: var(--dock-teal-ink);
-    flex: none;
-    height: 16px;
-    margin-left: auto;
+    height: 14px;
     opacity: 0;
+    position: absolute;
+    right: 12px;
+    top: 11px;
     transform: translateX(-4px);
     transition: opacity 0.2s ease, transform 0.2s ease;
-    width: 16px;
+    width: 14px;
   }
 
   .dock-item__go svg { display: block; height: 100%; width: 100%; }
@@ -620,9 +664,24 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
 </style>
 
 <script>
+  import { typesetBalanced, typesetAll } from '../scripts/pretext-typeset';
+
   // Two behaviours, both scoped to this section so a second copy on the page
   // can never observe the first copy's elements.
+  // One shared queue: what has to run again when a web font finally lands.
+  const RETYPESET = [];
+
   document.querySelectorAll('[data-dock]').forEach((dock) => {
+    // ── typeset the headlines ─────────────────────────────────────
+    // The balance search lives in src/scripts/pretext-typeset.js, shared with
+    // the research panel so both columns break lines the same way. It runs
+    // BEFORE the loop below clones the list (the clone has to carry the
+    // typeset lines) and again once the fonts are in (a late web font
+    // re-breaks every headline, which would change the row heights the rail
+    // times its travel against).
+    const relayouts = [];
+    const typesetNews = () => typesetAll(dock, '.dock-item__label');
+    typesetNews();
     // ── masthead height ─────────────────────────────────────────────
     // The dock is centred in the band of screen the masthead leaves free, so
     // that band has to be measured rather than assumed. The masthead is two
@@ -732,6 +791,14 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       window.addEventListener('resize', () => {
         if (window.innerWidth === w) return;
         w = window.innerWidth;
+        // Width changed, so every headline can re-break: typeset first, then
+        // re-measure the distance the new heights produce.
+        typesetNews();
+        if (clone) teardown();
+        sync();
+      });
+
+      relayouts.push(() => {
         if (clone) teardown();
         sync();
       });
@@ -744,6 +811,11 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     // One card, filled from the JSON the component emitted, opened on pointer
     // enter and on focus, closed on leave, blur and Escape. The row is a real
     // <button>, so a keyboard user gets exactly what a mouse user gets.
+    RETYPESET.push(() => {
+      typesetNews();
+      relayouts.forEach((run) => run());
+    });
+
     const preview = dock.querySelector('[data-dock-preview]');
     if (!preview) return;
     const pImg = preview.querySelector('[data-dock-preview-img]');
@@ -825,6 +897,11 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       // measures) worked.
       const wasHidden = preview.hidden;
       if (wasHidden) preview.hidden = false;
+      // The preview's own copy is a paragraph in a 276px panel: balance it now
+      // that it has a width (it measures 0 while [hidden]), so the panel opens
+      // at its final height instead of reflowing under the pointer.
+      if (pTitle) typesetBalanced(pTitle);
+      if (pText) typesetBalanced(pText);
       if (row) {
         const cardEl = preview.parentElement;
         const cardTop = cardEl ? cardEl.getBoundingClientRect().top : 0;
@@ -930,4 +1007,9 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       if (e.key === 'Escape') close();
     });
   });
+  // A web font landing after first paint re-breaks every headline above, so
+  // the typeset and the rail's timing are redone once, when the fonts are in.
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => RETYPESET.forEach((re) => re())).catch(() => {});
+  }
 </script>

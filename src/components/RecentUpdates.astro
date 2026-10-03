@@ -220,12 +220,18 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     box-shadow: var(--shadow-soft);
     /* Pinned to the LEFT edge. The parent .homepage-panels flex container
      * owns the left/right split; this card just needs a gutter from the left
-     * edge. The film's copy is left-aligned but the card floats above it. */
-    margin-left: clamp(16px, 3vw, 48px);
+     * edge. The film's copy is left-aligned but the card floats above it.
+     *
+     * Half the width this used to be (360 -> 180px at 1440) — the two panels
+     * together were eating a third of the screen for content that is eight
+     * dated lines. And the gutter went from 43px to ~7px so the narrower card
+     * sits further out: 36px of extra travel is 10% of the old 360px card,
+     * which is as far left as it can go before the viewport edge says no. */
+    margin-left: clamp(4px, 0.5vw, 8px);
     max-width: calc(100vw - 40px);
     padding: 20px 0;
     position: relative;
-    width: clamp(296px, 25vw, 372px);
+    width: clamp(148px, 12.5vw, 186px);
   }
 
   /* A hairline inset 5px from the border, in the guide colour. The recording
@@ -558,7 +564,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
    * first screen to the film alone. */
   @media (max-width: 1180px) {
     .dock { --dock-news-h: max(116px, min(236px, calc(100dvh - var(--dock-mast, 141px) - 497px))); }
-    .dock-card { width: clamp(280px, 28vw, 330px); }
+    .dock-card { width: clamp(140px, 14vw, 165px); }
     .dock-item__label { font-size: 14px; }
   }
 
@@ -567,13 +573,10 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       --dock-news-h: max(104px, min(210px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
       padding: 18px 0 22px;
     }
-    /* 240px, not the 288px this used to be. Pinned to the right edge with the
-     * 180px gutter the route labels need, a 288px card's left edge lands at
-     * 901..980px's copy (which ends at 423..461) with 2–9px to spare — less
-     * than the scrollbar itself. 240 buys 40–90px of air on the copy side
-     * while leaving 166px+ on the label side, which is the side with the
-     * smaller budget. */
-    .dock-card { width: min(240px, 28vw); }
+    /* Halving 240 literally gives 120px, which cannot hold a dated headline
+     * without shattering it into one word per line — the floor here is
+     * readability, not arithmetic, so 170px. */
+    .dock-card { width: min(170px, 18vw); }
     /* No room to the left of a 240px card on a 900px window, so the preview
      * opens over the card's own left half instead of beside it. It is still
      * pointer-transparent, so nothing is ever unreachable underneath it. */

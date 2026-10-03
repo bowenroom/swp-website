@@ -177,14 +177,21 @@ const FOUNDATION = {
      * over the film should read as the same kind of object. */
     box-shadow: var(--shadow-soft);
     /* The gutter is the film's route furniture, not an aesthetic choice: that
-     * rail hangs a label pill ~49px off its left side, and at 1440 the widest
-     * pill's left edge sits 176px in from the viewport. A 20-64px gutter put
-     * this panel's right edge 35px UNDER that pill. */
-    margin-right: 180px;
+     * rail hangs a label pill ~49px off its left side, and the widest pill's
+     * left edge sits a constant ~160px in from the viewport — EN's
+     * "Coordination" is wider than any Chinese label, so EN sets the budget.
+     *
+     * 180 -> 156 moves this panel 24px further right, which is as far as it
+     * can go: the full 10% (36px) would leave EN 4px of air. At 156 the panel
+     * edge and the pill edge are both measured from the same right-hand side,
+     * so the clearance holds at 16px at every viewport width. */
+    margin-right: 156px;
     max-width: calc(100vw - 40px);
     padding: 20px;
     position: relative;
-    width: clamp(296px, 25vw, 372px);
+    /* Half the old 360px — three numbered steps and a tag row were claiming a
+     * quarter of the screen. */
+    width: clamp(148px, 12.5vw, 186px);
   }
 
   .research-flow__panel::after {
@@ -376,7 +383,7 @@ const FOUNDATION = {
   /* ── Responsive ────────────────────────────────────────────── */
   @media (max-width: 1180px) {
     .research-flow__panel {
-      width: clamp(280px, 28vw, 330px);
+      width: clamp(140px, 14vw, 165px);
     }
     .research-flow__step-title {
       font-size: 13px;
@@ -388,7 +395,7 @@ const FOUNDATION = {
       padding: 18px 0 22px;
     }
     .research-flow__panel {
-      width: min(288px, 44vw);
+      width: min(170px, 26vw);
     }
   }
 

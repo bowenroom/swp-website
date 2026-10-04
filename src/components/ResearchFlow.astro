@@ -69,9 +69,27 @@ const FOUNDATION = {
 
 <section class="research-flow" data-research-flow aria-labelledby="research-flow-title">
   <div class="research-flow__panel">
-    <h2 id="research-flow-title" class="research-flow__kicker">
-      {isZh ? '研究方向' : 'Research'}
-    </h2>
+    <div class="research-flow__heading">
+      <h2 id="research-flow-title" class="research-flow__kicker">
+        {isZh ? '研究方向' : 'Research'}
+      </h2>
+      {/* Mobile-only disclosure control — the twin of the news card's. Hidden
+          above 760px, where this panel sits open beside the other one. */}
+      <button
+        class="panel-toggle"
+        type="button"
+        data-panel-toggle
+        data-panel-key="research"
+        aria-expanded="false"
+        aria-controls="research-body"
+        aria-label={isZh ? '收起或展开研究方向' : 'Collapse or expand research directions'}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </div>
+    <div class="research-flow__body" id="research-body" data-panel-body>
     <!-- ── Steps row ───────────────────────────────────────────── -->
     <div class="research-flow__steps">
       {STEPS.map((step, i) => (
@@ -138,6 +156,7 @@ const FOUNDATION = {
           </svg>
         </div>
       ))}
+      </div>
     </div>
   </div>
 </section>
@@ -168,6 +187,13 @@ const FOUNDATION = {
 
     /* Same micro-label the news card carries, so the two panels read as a pair:
      12px, 600, wide tracking, uppercase — the one place tracking is sanctioned. */
+  .research-flow__heading {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
   .research-flow__kicker {
     color: var(--rf-teal);
     font-family: var(--rf-sans);
@@ -175,8 +201,45 @@ const FOUNDATION = {
     font-weight: 600;
     letter-spacing: 0.16em;
     line-height: 1.5;
-    margin: 0 0 8px;
+    margin: 0;
     text-transform: uppercase;
+  }
+
+  /* ── mobile disclosure control ───────────────────────────────────
+     The twin of the news card's: hidden above 760px, where the panel has
+     nothing to disclose, and the heading row is the whole affordance on the
+     stacked layout. */
+  .panel-toggle {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: var(--rf-teal);
+    cursor: pointer;
+    display: none;
+    flex: none;
+    font: inherit;
+    letter-spacing: 0;
+    line-height: 1;
+    padding: 6px;
+    text-transform: none;
+    transition: transform 0.25s ease;
+  }
+
+  .panel-toggle svg {
+    display: block;
+    height: 14px;
+    width: 14px;
+  }
+
+  .panel-toggle[aria-expanded='true'] {
+    transform: rotate(180deg);
+  }
+
+  .panel-toggle:focus-visible {
+    border-radius: 3px;
+    outline: 2px solid var(--rf-teal);
+    outline-offset: 1px;
   }
 
 
@@ -581,6 +644,18 @@ const FOUNDATION = {
       margin-right: 0;
       width: min(92%, 380px);
     }
+
+    .panel-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Height is driven inline by panel-collapse.js; `auto` at rest is what
+       the transition hands back when the panel finishes opening. */
+    .research-flow__body {
+      transition: height 0.32s ease;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -594,6 +669,7 @@ const FOUNDATION = {
 
 <script>
   import { typesetAll, measureTextHeight } from '../scripts/pretext-typeset';
+  import { initPanelToggle } from '../scripts/panel-collapse';
 
   // Two jobs: break this panel's copy the same way the news card does, and
   // open each step at EXACTLY the height its text needs.
@@ -612,6 +688,9 @@ const FOUNDATION = {
       typesetAll(panel, '.research-flow__foundation-desc');
     };
     typeset();
+
+    // The heading row doubles as the mobile disclosure control.
+    initPanelToggle(panel);
 
     panel.querySelectorAll('[data-step]').forEach((step) => {
       const desc = step.querySelector('[data-step-description]');

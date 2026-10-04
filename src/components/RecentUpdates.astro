@@ -86,8 +86,25 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
          have: two half-length animations meet at slightly different offsets and
          the same card shows twice at the wrap. One track, one clock, one seam. -->
     <div class="dock-news" data-dock-news>
-      <p class="dock-kicker">{isZh ? '近期动态' : 'Recent'}</p>
-      <div class="dock-viewport" data-dock-viewport>
+      <p class="dock-kicker">
+        <span>{isZh ? '近期动态' : 'Recent'}</span>
+        {/* Mobile-only disclosure control: hidden by CSS above 760px, where the
+            panel is permanently open beside the research one. */}
+        <button
+          class="panel-toggle"
+          type="button"
+          data-panel-toggle
+          data-panel-key="news"
+          aria-expanded="false"
+          aria-controls="dock-news-body"
+          aria-label={isZh ? '收起或展开近期动态' : 'Collapse or expand recent updates'}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </p>
+      <div class="dock-viewport" id="dock-news-body" data-panel-body data-dock-viewport>
         <div class="dock-track" data-dock-track>
           <ul class="dock-list">
             {items.map((item) => (
@@ -253,17 +270,56 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
   }
 
   .dock-kicker {
+    align-items: center;
     color: var(--dock-teal-ink);
+    display: flex;
     font-family: var(--dock-sans);
     font-size: 12px;
     font-weight: 600;
     /* Wide tracking is correct HERE and nowhere else in this file: this is a
      * short uppercase micro-label, which is the one case the style guide
      * sanctions. No body text in this component sets letter-spacing above 0. */
+    justify-content: space-between;
     letter-spacing: 0.16em;
     line-height: 1.5;
     margin: 0 14px 8px;
     text-transform: uppercase;
+  }
+
+  /* ── mobile disclosure control ───────────────────────────────────
+     Hidden above 760px (the desktop panel has nothing to disclose), shown on
+     the stacked layout where the heading row is the whole affordance. */
+  .panel-toggle {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: var(--dock-teal-ink);
+    cursor: pointer;
+    display: none;
+    flex: none;
+    font: inherit;
+    letter-spacing: 0;
+    line-height: 1;
+    padding: 6px;
+    text-transform: none;
+    transition: transform 0.25s ease;
+  }
+
+  .panel-toggle svg {
+    display: block;
+    height: 14px;
+    width: 14px;
+  }
+
+  .panel-toggle[aria-expanded='true'] {
+    transform: rotate(180deg);
+  }
+
+  .panel-toggle:focus-visible {
+    outline: 2px solid var(--dock-teal);
+    outline-offset: 1px;
+    border-radius: 3px;
   }
 
   /* ── news rail ─────────────────────────────────────────────────── */
@@ -643,6 +699,15 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       height: auto;
       mask-image: none;
       overflow: visible;
+      /* The height is driven inline by panel-collapse.js; `auto` at rest is
+         what the transition hands back when the panel finishes opening. */
+      transition: height 0.32s ease;
+    }
+
+    .panel-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .dock-track { animation: none; }
     .dock-item__label { font-size: 15px; }
@@ -665,6 +730,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
 
 <script>
   import { typesetBalanced, typesetAll } from '../scripts/pretext-typeset';
+  import { initPanelToggle } from '../scripts/panel-collapse';
 
   // Two behaviours, both scoped to this section so a second copy on the page
   // can never observe the first copy's elements.
@@ -682,6 +748,9 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     const relayouts = [];
     const typesetNews = () => typesetAll(dock, '.dock-item__label');
     typesetNews();
+
+    // The heading row doubles as the mobile disclosure control.
+    initPanelToggle(dock);
     // ── masthead height ─────────────────────────────────────────────
     // The dock is centred in the band of screen the masthead leaves free, so
     // that band has to be measured rather than assumed. The masthead is two
@@ -726,6 +795,11 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
 
     if (track && list) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+      // The clone exists only to be travelled into. At <=760px the track's
+      // animation is `none`, so the second lap just sits there: measured on a
+      // 390px viewport, 20 rows for 10 entries and a card 600px taller than its
+      // content. Gate the duplication on the loop actually running.
+      const loopOn = window.matchMedia('(min-width: 761px)');
       let clone = null;
 
       const measure = () => {
@@ -740,7 +814,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
       };
 
       const build = () => {
-        if (reduce.matches || clone) return;
+        if (reduce.matches || !loopOn.matches || clone) return;
         clone = list.cloneNode(true);
         clone.setAttribute('aria-hidden', 'true');
         // The clone is a second lap of the same entries, so it must be
@@ -781,8 +855,15 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
         clone = null;
       };
 
-      const sync = () => (reduce.matches ? teardown() : build());
+      const sync = () => (reduce.matches || !loopOn.matches ? teardown() : build());
       sync();
+
+      const onLoopChange = () => {
+        teardown();
+        sync();
+      };
+      if (loopOn.addEventListener) loopOn.addEventListener('change', onLoopChange);
+      else if (loopOn.addListener) loopOn.addListener(onLoopChange);
 
       // Re-measure on resize: the row pitch changes at the breakpoints above, so
       // a distance captured once at load would drift out of phase with the new

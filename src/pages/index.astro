@@ -45,7 +45,13 @@ const copy = pageCopy(id, lang);
   @media (max-width: 760px) {
     .homepage-panels {
       flex-direction: column;
-      align-items: center;
+      /* STRETCH, not center: a centered column flex item is sized to its
+         contents, and each panel then resolves `width: min(92%, 380px)`
+         against that shrink-to-fit width. Measured at 390px viewport: the news
+         card came out 98px wide, which is why every five-character headline
+         broke in half. Stretching gives both panels the full column to take
+         92% OF. */
+      align-items: stretch;
       gap: 20px;
       padding: 88px 0 56px;
     }

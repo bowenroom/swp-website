@@ -83,15 +83,18 @@ const FOUNDATION = {
             aria-expanded="false"
             style={`--step-accent: ${step.accent}`}
           >
-            <span class="research-flow__step-number">{step.number}</span>
-            <span class="research-flow__step-title">{step.title}</span>
+            {/* Number and title on one baseline row: stacking them (as
+                before) spent 20px of a 110px column on the number alone. */}
+            <span class="research-flow__step-head">
+              <span class="research-flow__step-number">{step.number}</span>
+              <span class="research-flow__step-title">{step.title}</span>
+            </span>
             <span class="research-flow__step-toggle" aria-hidden="true">
-              {/* Two paths, not one: the horizontal one stays and the vertical
-                  one fades as the step opens, so + becomes − instead of the
-                  icon having to be swapped on every click. */}
+              {/* Same glyph as the chain chevrons on the spine — a stock "+"
+                  was the one default-looking thing in an otherwise custom
+                  panel. It rotates as the step opens. */}
               <svg viewBox="0 0 16 16">
-                <path class="research-flow__toggle-h" d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                <path class="research-flow__toggle-v" d="M8 3v10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </span>
             <span class="research-flow__step-description" data-step-description>
@@ -101,7 +104,9 @@ const FOUNDATION = {
           {i < STEPS.length - 1 && (
             <div class="research-flow__arrow" aria-hidden="true">
               <svg viewBox="0 0 24 24">
-                <path d="M4 12h14M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                {/* Down chevron: the chain runs downward — the right-pointing
+                    arrow read as a stray mark on a vertical spine. */}
+                <path d="M6 8l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
           )}
@@ -205,12 +210,26 @@ const FOUNDATION = {
   
 
   /* ── Steps ─────────────────────────────────────────────────── */
-    .research-flow__steps {
-    border-top: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
+      .research-flow__steps {
     display: flex;
     flex-direction: column;
     margin-bottom: 14px;
+    position: relative;
   }
+
+  /* The spine. The news card carries the same hairline down its list, so the
+     two panels now share one graphic idea instead of one being a list and the
+     other a stack of boxes. */
+  .research-flow__steps::before {
+    background: color-mix(in srgb, var(--rf-accent) 28%, var(--rf-guide));
+    bottom: 6px;
+    content: '';
+    left: 7px;
+    position: absolute;
+    top: 14px;
+    width: 1px;
+  }
+
 
 
     /* Step, then the chain arrow UNDER it: side by side at 180px cost the step
@@ -222,24 +241,64 @@ const FOUNDATION = {
   }
 
 
-    .research-flow__step {
-    align-items: flex-start;
+      .research-flow__step {
     background: none;
     border: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
     color: inherit;
     cursor: pointer;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+    display: block;
     font: inherit;
-    gap: 2px;
-    padding: 9px 26px 10px 12px;
+    padding: 9px 20px 10px 20px;
     position: relative;
     text-align: left;
     transition: background 0.2s ease;
     width: 100%;
   }
+
+  /* Node on the spine: outlined at rest, filled with the step's accent while
+     hovered or open — a state the reader can see from across the panel, which
+     the faint + at the top-right could never carry. */
+  .research-flow__step::after {
+    background: var(--rf-panel);
+    border: 1px solid var(--step-accent, var(--rf-accent));
+    border-radius: 50%;
+    content: '';
+    height: 9px;
+    left: 3px;
+    position: absolute;
+    top: 13px;
+    transition: background 0.2s ease;
+    width: 9px;
+  }
+
+  .research-flow__step:hover::after,
+  .research-flow__step:focus-visible::after,
+  .research-flow__step[aria-expanded='true']::after {
+    background: var(--step-accent, var(--rf-accent));
+  }
+
+  /* The accent rail at the panel edge, kept from the news card: node fills,
+     rail grows — two cues for the same state, both composited on the GPU. */
+  .research-flow__step::before {
+    background: var(--step-accent, var(--rf-accent));
+    content: '';
+    height: 100%;
+    left: -14px;
+    position: absolute;
+    top: 0;
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform 0.2s ease;
+    width: 2px;
+  }
+
+  .research-flow__step:hover::before,
+  .research-flow__step:focus-visible::before,
+  .research-flow__step[aria-expanded='true']::before {
+    transform: scaleY(1);
+  }
+
 
   /* The accent rail from the news card, so both panels light up the same way:
      a bar scaled on the GPU rather than layout animated on a row the marquee
@@ -275,23 +334,35 @@ const FOUNDATION = {
     outline-offset: 2px;
   }
 
-  .research-flow__step-number {
-    color: var(--step-accent, var(--rf-accent));
-    font-family: var(--rf-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    line-height: 1.4;
+    .research-flow__step-head {
+    align-items: baseline;
+    display: flex;
+    gap: 6px;
+    min-width: 0;
   }
 
-    .research-flow__step-title {
+  .research-flow__step-number {
+    color: var(--step-accent, var(--rf-accent));
+    flex: none;
+    font-family: var(--rf-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
+  }
+
+
+      .research-flow__step-title {
     color: var(--rf-ink);
+    flex: 1 1 auto;
     font-family: var(--rf-sans);
     font-size: 13.5px;
     font-weight: 600;
     line-height: 1.45;
+    min-width: 0;
     transition: color 0.18s ease;
   }
+
 
   .research-flow__step:hover .research-flow__step-title,
   .research-flow__step:focus-visible .research-flow__step-title,
@@ -301,14 +372,20 @@ const FOUNDATION = {
 
 
     .research-flow__step-toggle {
-    color: var(--rf-ink-soft);
+    color: var(--step-accent, var(--rf-accent));
     height: 14px;
-    opacity: 0.45;
+    opacity: 0.5;
     position: absolute;
-    right: 10px;
-    top: 11px;
-    transition: opacity 0.2s ease;
+    right: 6px;
+    top: 12px;
+    transition: opacity 0.2s ease, transform 0.25s ease;
     width: 14px;
+  }
+
+  .research-flow__step:hover .research-flow__step-toggle,
+  .research-flow__step:focus-visible .research-flow__step-toggle,
+  .research-flow__step[aria-expanded='true'] .research-flow__step-toggle {
+    opacity: 1;
   }
 
 
@@ -346,23 +423,25 @@ const FOUNDATION = {
     transition: height 0.3s ease;
   }
 
-  .research-flow__step-toggle-v {
-    transition: opacity 0.2s ease;
-  }
-
-  .research-flow__step[aria-expanded='true'] .research-flow__toggle-v {
-    opacity: 0;
+  .research-flow__step[aria-expanded='true'] .research-flow__step-toggle {
+    transform: rotate(180deg);
   }
 
   /* The chain arrows carry the argument of this panel (application -> carrier
      -> method), so at this size they are tinted toward the accent rather than
      the hairline colour: in the guide colour they read as stray marks. */
-  .research-flow__arrow {
+    .research-flow__arrow {
+    align-self: flex-start;
     color: color-mix(in srgb, var(--rf-accent) 55%, var(--rf-guide));
-    height: 14px;
-    margin: 4px 0;
-    width: 14px;
+    height: 11px;
+    /* Sits on the spine between two nodes: 7px is the spine, 5px half the
+       glyph. */
+    margin: -7px 0 -4px 2px;
+    position: relative;
+    width: 11px;
+    z-index: 1;
   }
+
 
 
   .research-flow__arrow svg {
@@ -375,23 +454,56 @@ const FOUNDATION = {
     /* No second box: a bordered block inside a bordered panel was the boxiest
      thing on the page. A rule across the top separates it for 1px instead of
      four borders. */
+    /* A tray, not a bordered box: the review note was that this block read as a
+     separate panel rather than as the thing the three steps land on. A 4%
+     wash with no border says "base" without reintroducing the box-in-box that
+     was cut earlier — and the spine runs INTO it instead of stopping at a rule. */
   .research-flow__foundation {
-    background: none;
-    border-top: 1px solid color-mix(in srgb, var(--rf-guide) 85%, transparent);
-    padding-top: 12px;
+    background: color-mix(in srgb, var(--rf-accent) 4%, transparent);
+    border-radius: 4px;
+    padding: 11px 10px 12px 24px;
+    position: relative;
   }
+
+  /* The spine crosses into the tray and terminates on a node. */
+  .research-flow__foundation::before {
+    background: color-mix(in srgb, var(--rf-accent) 28%, var(--rf-guide));
+    bottom: auto;
+    content: '';
+    height: 44px;
+    left: 7px;
+    position: absolute;
+    top: -14px;
+    width: 1px;
+  }
+
+  .research-flow__foundation::after {
+    background: color-mix(in srgb, var(--rf-accent) 8%, var(--rf-panel));
+    border: 1px solid var(--rf-accent);
+    content: '';
+    height: 8px;
+    left: 3px;
+    position: absolute;
+    top: 19px;
+    transform: rotate(45deg);
+    width: 8px;
+  }
+
 
   .research-flow__foundation-header {
     margin-bottom: 8px;
+    padding-left: 0;
   }
 
-  .research-flow__foundation-title {
+    .research-flow__foundation-title {
     color: var(--rf-accent);
+    display: block;
     font-family: var(--rf-mono);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
   }
+
 
 .research-flow__foundation-desc {
     color: var(--rf-ink-soft);
@@ -420,12 +532,13 @@ const FOUNDATION = {
 
 
   /* ── Connectors (visual only) ──────────────────────────────── */
+  /* Three down-arrows under the steps used to fan into the foundation; the
+     spine plus its terminal node now says the same thing in 1px, and at 180px
+     those three glyphs were most of the panel's vertical noise. */
   .research-flow__connectors {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 8px;
-    pointer-events: none;
+    display: none;
   }
+
 
   .research-flow__connector {
     color: var(--rf-guide);

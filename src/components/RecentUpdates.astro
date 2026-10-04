@@ -293,7 +293,7 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
    * window; below it, on a window too short to give the rail its design
    * height, the card would otherwise push the research tree off the fold. */
   .dock {
-    --dock-news-h: max(120px, min(262px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
+    --dock-news-h: max(120px, min(427px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
   }
 
   /* Roughly four rows crisp at the designed height, dissolving at both ends.
@@ -607,14 +607,14 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
    * because a stack would push the research under the fold and hand the whole
    * first screen to the film alone. */
   @media (max-width: 1180px) {
-    .dock { --dock-news-h: max(116px, min(236px, calc(100dvh - var(--dock-mast, 141px) - 497px))); }
+    .dock { --dock-news-h: max(116px, min(354px, calc(100dvh - var(--dock-mast, 141px) - 497px))); }
     .dock-card { width: clamp(140px, 14vw, 165px); }
     .dock-item__label { font-size: 14px; }
   }
 
   @media (max-width: 980px) {
     .dock {
-      --dock-news-h: max(104px, min(210px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
+      --dock-news-h: max(104px, min(315px, calc(100dvh - var(--dock-mast, 141px) - 497px)));
       padding: 18px 0 22px;
     }
     /* Halving 240 literally gives 120px, which cannot hold a dated headline

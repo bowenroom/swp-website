@@ -85,7 +85,18 @@ const NO_LINE_START = new Set([
   '!', '%', ')', ',', '.', ':', ';', '?', ']', '}', '”', '’',
   '。', '、', '，', '、', '；', '：', '！', '？', '）', '】', '》',
   '〉', '」', '』', '〕', '…', '～', 'ー',
+  // Hyphens too: the illegal direction for a compound term is breaking BEFORE
+  // the hyphen, which is what produced `Vision` / `-Language Models`. Between
+  // this and NO_LINE_END, "Vision-Language" can only sit whole on one line.
+  '-', '‐', '‑', '–',
 ]);
+
+// A line may not END on a hyphen: the segmenter hands us "Vision" / "-" /
+// "Language" as separate tokens, so word boundaries alone still produced
+// `Multimodal VLM + Multi` + `-Agent` and `Vision` + `-Language Models`.
+// Legal by the line-breaking rules, and wrong for reading — compound terms
+// keep their hyphen on the same line as both halves.
+const NO_LINE_END = new Set(['-', '‐', '‑', '–']);
 
 function breakByWords(raw, font, width, lineCount, prep, lineHeight) {
   const tokens = wordTokens(raw);
@@ -111,6 +122,8 @@ function breakByWords(raw, font, width, lineCount, prep, lineHeight) {
         // which follows the line-breaking rules. Ruling those candidates out
         // is what makes the fallback (greedy) the exception, not the result.
         if (k > 1 && NO_LINE_START.has(raw[tokens[j - 1].index] || '')) continue;
+        const lastChar = raw[tokens[i - 1].index + tokens[i - 1].len - 1] || '';
+        if (NO_LINE_END.has(lastChar) && i < n) continue;
         const cost = dp[j - 1][k - 1];
         if (cost === INF) continue;
         const score = cost + (sum - avg) * (sum - avg);

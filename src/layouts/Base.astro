@@ -79,7 +79,7 @@ const section = id.split('/')[0];
     <!-- Clipped rather than display:none, which would drop the heading from
          the accessibility tree along with the visual. -->
     {hiddenH1 && <h1 class="visually-hidden">{hiddenH1}</h1>}
-    <header class:list={['masthead', overFilm && 'masthead--over-film']}>
+    <header class:list={['masthead', overFilm && 'masthead--over-film']} data-masthead>
       <div class="masthead-inner">
         <a class="wordmark" href={routeFor('', lang)}>{siteName(lang)}</a>
         <nav aria-label={lang === 'zh' ? '主导航' : 'Main'}>
@@ -103,8 +103,16 @@ const section = id.split('/')[0];
     </main>
 
     <footer class:list={['site-footer', overFilm && 'site-footer--over-film']}>
-      <div class="wrap">
-        <p>© {new Date().getFullYear()} {siteName(lang)}</p>
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <a class="footer-name" href={routeFor('', lang)}>{siteName(lang)}</a>
+          {/* The legal line is a caption under the name, not a peer of it: the
+              copyright and the navigation used to share a line and a weight,
+              so nothing in the last screen read as primary. */}
+          <p class="footer-meta">
+            © {new Date().getFullYear()} · {lang === 'zh' ? '保留所有权利' : 'All rights reserved'}
+          </p>
+        </div>
         <nav aria-label={lang === 'zh' ? '页脚导航' : 'Footer'}>
           <ul>
             {NAV_IDS.map((n) => (
@@ -112,7 +120,48 @@ const section = id.split('/')[0];
             ))}
           </ul>
         </nav>
+        {/* An SVG arrow, never a typed glyph — the shape has to hold at 13px
+            and across the two font stacks. */}
+        <button class="footer-top" type="button" data-back-to-top>
+          <span>{lang === 'zh' ? '回到顶部' : 'Back to top'}</span>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 13.5V3M3.8 7.2 8 3l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
     </footer>
+
+    <script>
+      // The bar compacts once the page has moved: that class drives the padding
+      // swap in kami.css and, via a sibling selector, the film's own topbar
+      // stepping aside on the homepage. rAF-throttled, passive — this runs on
+      // every scroll frame and must not be able to jank the film's scrub.
+      const mast = document.querySelector('[data-masthead]');
+      if (mast) {
+        let pending = false;
+        const sync = () => {
+          pending = false;
+          mast.classList.toggle('masthead--stuck', window.scrollY > 16);
+        };
+        sync();
+        window.addEventListener(
+          'scroll',
+          () => {
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(sync);
+          },
+          { passive: true }
+        );
+      }
+
+      // Instant, not smooth: the homepage maps scroll position to a film
+      // timeline, and a 9,000px smooth scroll would replay nine seconds of
+      // video on the way up.
+      const backTop = document.querySelector('[data-back-to-top]');
+      if (backTop) {
+        backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'auto' }));
+      }
+    </script>
   </body>
 </html>

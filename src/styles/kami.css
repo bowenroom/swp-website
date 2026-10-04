@@ -43,6 +43,18 @@
   --charcoal: #4d4c48;
   --stone: #6b6a64;
   --measure: 720px;
+  /* Chrome, not prose. The reading measure is 720px; the masthead and footer
+     are the page's frame and sit on a wider shell so the identity anchors to
+     the gutters instead of floating through the middle third of a wide
+     screen — which is what it did, and what made the bar read as loose. */
+  --shell: 1180px;
+  /* At-rest top padding of the masthead row, and the padding it keeps once it
+     sticks. The compact state gives the difference back as MARGIN (see
+     .masthead--stuck): the document must not change height when the bar
+     shrinks, or every page — and the homepage film, which maps scroll to a
+     timeline — jumps mid-scroll. */
+  --mast-pad-top: 24px;
+  --mast-pad-top-stuck: 8px;
   --serif: 'TsangerJinKai02', 'Source Han Serif SC', 'Source Han Serif CN', 'Noto Serif CJK SC',
     'Noto Serif SC', 'Songti SC', 'STSong', Georgia, serif;
   --latin: Charter, 'Iowan Old Style', Georgia, 'Times New Roman', serif;
@@ -106,6 +118,11 @@ html[lang='zh-CN'] .lede {
 }
 
 /* Label and caption tiers tighten up as the type gets smaller. */
+.lang-switch:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
 .lang-switch,
 .placeholder-note,
 .site-footer {
@@ -133,20 +150,43 @@ a {
   margin: 0 auto;
 }
 
-/* ── masthead ─────────────────────────────────────────────── */
+/* ── masthead ───────────────────────────────────────────────
+ * Sticky, because section switching has to survive the scroll: this is a
+ * 9,000px homepage and a 3,000px papers page, and a bar that scrolls away
+ * takes the only navigation with it. Three columns — identity, wayfinding,
+ * language — on one shared centre line, so nothing sits a few pixels above or
+ * below anything else (the baseline alignment used to float the EN pill low
+ * and the wordmark high). */
 .masthead {
+  background: color-mix(in srgb, var(--parchment) 92%, transparent);
+  backdrop-filter: blur(8px) saturate(110%);
+  -webkit-backdrop-filter: blur(8px) saturate(110%);
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+/* Compacted: the vacated top padding is returned as flow height, so the
+ * document keeps exactly the space the bar had at rest. */
+.masthead--stuck {
+  box-shadow: 0 14px 26px -22px rgb(20 20 19 / 70%);
+  margin-bottom: calc(var(--mast-pad-top) - var(--mast-pad-top-stuck));
 }
 
 .masthead-inner {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  justify-content: space-between;
+  align-items: center;
+  display: grid;
+  gap: 0 24px;
+  grid-template-columns: auto 1fr auto;
   margin: 0 auto;
-  max-width: var(--measure);
-  padding: 28px 0 20px;
+  max-width: var(--shell);
+  padding: var(--mast-pad-top) 0 16px;
+  transition: padding-top 0.25s ease;
+}
+
+.masthead--stuck .masthead-inner {
+  padding-top: var(--mast-pad-top-stuck);
 }
 
 /* 500, not 600: Kami allows a serif exactly two weights, and 600 makes the
@@ -155,13 +195,26 @@ a {
   color: var(--near-black);
   font-size: var(--fs-h2);
   font-weight: 500;
+  /* One step of tracking is enough to make the two-glyph name read as a
+     lockup rather than as another piece of running text. */
+  letter-spacing: 0.03em;
   text-decoration: none;
 }
 
+.wordmark:hover {
+  color: var(--brand);
+}
+
+.masthead nav {
+  justify-self: center;
+}
+
 .masthead nav ul {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 20px;
+  gap: 2px 22px;
+  justify-content: center;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -171,31 +224,46 @@ a {
  * step. Two-glyph CJK labels need the extra size to hold their shape, and this
  * is the size the reference site renders its own nav at. */
 .masthead nav a {
+  /* A transparent rule at rest so hover and current never shift the row —
+     the old 1px underline was drawn only on the current item, which moved the
+     whole bar by a pixel whenever the page changed. */
+  border-bottom: 2px solid transparent;
+  /* dark-warm, not charcoal: over the film the bar is 92% opaque, and the
+     half-opacity window it leaves was reading as washed-out grey. 8.9:1 now. */
   color: var(--dark-warm);
-  font-size: var(--fs-lede);
+  display: block;
+  font-size: var(--fs-body);
   font-weight: 500;
+  letter-spacing: 0.02em;
   /* Vertical padding so the target clears 24px: the label itself sets to
-   * ~23px, one pixel under the AA target-size floor, and this is wayfinding
-   * that has to work with a thumb as well as a pointer. */
-  padding: 4px 0;
+   * ~21px, under the AA target-size floor, and this is wayfinding that has to
+   * work with a thumb as well as a pointer. */
+  padding: 7px 3px 5px;
   text-decoration: none;
+  transition: border-color 0.18s ease, color 0.18s ease;
 }
 
 .masthead nav a:hover {
+  border-bottom-color: color-mix(in srgb, var(--brand) 40%, transparent);
   color: var(--brand);
 }
 
 /* The underline is the current-page indicator, so it encodes state rather than
- * decorating. A background pill would compete with the wordmark for attention. */
+ * decorating — and at 2px against a reserved slot it is legible at a glance,
+ * which the old hairline was not. A background pill would compete with the
+ * wordmark for attention, and the serif ships only two weights, so weight
+ * cannot carry the state either. */
 .masthead nav a[aria-current='page'] {
-  border-bottom: 1px solid var(--brand);
+  border-bottom-color: var(--brand);
   color: var(--brand);
 }
 
 .lang-switch {
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--stone) 35%, var(--border));
   border-radius: 999px;
   color: var(--charcoal);
+  justify-self: end;
+  transition: border-color 0.18s ease, color 0.18s ease;
   /* The switch renders "中文" on the English site, so the stack needs a CJK
    * fallback — a Latin-only stack leaves those two glyphs to chance. */
   font-family: var(--latin), 'TsangerJinKai02', 'Source Han Serif SC', 'Songti SC', serif;
@@ -281,19 +349,91 @@ h1 {
   max-width: 56ch;
 }
 
-/* ── footer ────────────────────────────────────────────────── */
+/* ── footer ──────────────────────────────────────────────────
+ * Three columns on one line: who, where to go next, and a way back up. The
+ * copyright used to share a line and a weight with the navigation, so nothing
+ * read as primary — now the identity is the anchor (body step, near-black)
+ * and the legal line is a caption under it (meta step, stone). */
 .site-footer {
   border-top: 1px solid var(--border);
   color: var(--stone);
   font-size: var(--fs-meta);
   line-height: 1.4;
   margin: 0 auto;
-  max-width: var(--measure);
-  padding: 20px 0 40px;
+  max-width: var(--shell);
+  padding: 26px 0 44px;
 }
 
-.site-footer p {
+/* The footer sits on the shell, not the reading measure: `.wrap` would pull
+ * it back to 720px and re-centre the frame inside the page. */
+.site-footer .wrap {
+  max-width: none;
+}
+
+.footer-inner {
+  align-items: center;
+  display: grid;
+  gap: 18px 32px;
+  grid-template-columns: auto 1fr auto;
+}
+
+.footer-brand {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.footer-name {
+  color: var(--near-black);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.footer-name:hover {
+  color: var(--brand);
+}
+
+.footer-meta {
+  color: var(--stone);
+  font-size: var(--fs-meta);
   margin: 0;
+}
+
+.footer-top {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--stone);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: var(--fs-meta);
+  gap: 6px;
+  justify-self: end;
+  letter-spacing: 0.04em;
+  padding: 6px 2px;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.footer-top:hover {
+  color: var(--brand);
+}
+
+.footer-top:focus-visible,
+.footer-name:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.footer-top svg {
+  display: block;
+  height: 13px;
+  width: 13px;
 }
 
 /* ── visually hidden ────────────────────────────────────────── */
@@ -460,29 +600,98 @@ body {
  * should be able to reach them from its last screen. Hairline-separated text
  * links, not pills — the pills are spent on actions, and these are places. */
 .site-footer nav {
-  margin-top: 10px;
+  justify-self: center;
+  margin-top: 0;
 }
 
 .site-footer nav ul {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 18px;
+  gap: 4px 20px;
+  justify-content: center;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .site-footer nav a {
+  /* One weight above the caption beside it: the navigation is the footer's
+     primary job and the copyright is a footnote, and they used to read as the
+     same thing. */
+  font-weight: 500;
   color: var(--charcoal);
   display: inline-block;
   font-size: var(--fs-meta);
+  letter-spacing: 0.02em;
   /* Same target-size floor as the masthead: 19px of label plus 12px of
    * padding lands every link over 24px without changing the row's rhythm. */
   padding: 6px 0;
+  transition: color 0.18s ease;
 }
 
 .site-footer nav a:hover {
   color: var(--brand);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* ── narrow screens ───────────────────────────────────────────
+ * The three-column masthead cannot hold six CJK labels at 390px, so the grid
+ * folds to identity + language on row one and the wayfinding across row two,
+ * evenly distributed rather than ragged. Every target grows to 44px: this is
+ * the layout where the nav is driven by a thumb, not a pointer. */
+@media (max-width: 760px) {
+  .masthead-inner {
+    gap: 4px 10px;
+    grid-template-columns: 1fr auto;
+    padding-bottom: 6px;
+    padding-top: 16px;
+  }
+
+  .masthead--stuck .masthead-inner {
+    padding-top: 6px;
+  }
+
+  .masthead nav {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
+  .masthead nav ul {
+    gap: 0 6px;
+    justify-content: space-between;
+  }
+
+  .masthead nav a {
+    font-size: var(--fs-body);
+    padding: 12px 4px;
+  }
+
+  .wordmark {
+    font-size: var(--fs-h3);
+  }
+
+  .footer-inner {
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .site-footer nav {
+    justify-self: start;
+  }
+
+  .site-footer nav ul {
+    gap: 2px 16px;
+    justify-content: flex-start;
+  }
+
+  .site-footer nav a {
+    padding: 10px 0;
+  }
+
+  .footer-top {
+    justify-self: start;
+    padding: 10px 2px;
+  }
 }

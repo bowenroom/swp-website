@@ -762,6 +762,13 @@ const linkMap = Object.fromEntries(items.map((i) => [i.id, i.href || '']));
     const mast = document.querySelector('.masthead');
     const syncMast = () => {
       if (!mast) return;
+      // The masthead compacts once the page scrolls (Base.astro adds
+      // .masthead--stuck), which changes its height by ~74px. Re-measuring
+      // then would rewrite --dock-mast mid-scroll and resize the panels' stage
+      // under the reader — on this page that stage is what times the film. The
+      // band is a rest-state number; the stuck state keeps its flow height via
+      // margin, so ignoring it costs nothing.
+      if (mast.classList.contains('masthead--stuck')) return;
       // offsetHeight rather than getBoundingClientRect: this wants the LAYOUT
       // height, and must not pick up a transform or a fractional device-pixel
       // value that would put the band a pixel out.

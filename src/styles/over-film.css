@@ -18,7 +18,13 @@
  */
 
 .masthead--over-film {
-  position: relative;
+  /* The variant that needs stickiness most: this page is 9,000px of film and
+     the only other navigation is in the footer. */
+  position: sticky;
+  top: 0;
+  /* Clears the film's fixed topbar at rest; the compact state drops it (see
+     --mast-pad-top-stuck) and hands the space back as margin. */
+  --mast-pad-top: 84px;
   /* Above EVERYTHING the film and the floating dock draw. The film's own topbar
    * is 50, its scenes reach 120, and the dock that floats over the film is 130
    * (see RecentUpdates.astro). The masthead is the one layer that must never be
@@ -36,15 +42,27 @@
 /* On a page where the film owns the first screen, the film also provides the
  * scroll runway, so the masthead must not add a screen of its own above it.
  * Only its own padding is kept -- enough to hold the wordmark clear of the
- * film's topbar, which sits at the very top of the viewport. */
-.masthead--over-film .masthead-inner {
-  padding-top: 84px;
+ * film's topbar, which sits at the very top of the viewport. That padding is
+ * now the --mast-pad-top token, so the compact state and the flow-height
+ * compensation live in one place (kami.css). */
+@media (max-width: 760px) {
+  .masthead--over-film {
+    --mast-pad-top: 96px;
+  }
 }
 
-@media (max-width: 760px) {
-  .masthead--over-film .masthead-inner {
-    padding-top: 96px;
-  }
+/* The film's topbar owns the identity at rest. Once the bar compacts it steps
+ * aside — otherwise the page would show two stacked bars, the affiliation row
+ * stranded below a navigation that just took its place. Sibling selector: the
+ * topbar lives inside main, after the masthead. */
+.sw-topbar {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.masthead--over-film.masthead--stuck ~ main .sw-topbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
 }
 
 /* The film provides the whole first screen, so the document must not also
@@ -85,4 +103,13 @@
   z-index: 140;
   max-width: none;
   background: var(--parchment);
+}
+
+/* The band is full-bleed (the film shows on both sides otherwise), but its
+ * content sits on the same shell as every other page — left to itself it
+ * would stretch the identity to the far left edge and the back-to-top to the
+ * far right, 1400px apart. */
+.site-footer--over-film .wrap {
+  margin: 0 auto;
+  max-width: var(--shell);
 }
